@@ -28,7 +28,7 @@ const Seats = () => {
       isPaid: true,
       teamName: "Velocity Racing",
       teamLogo: undefined,
-      status: "open",
+      status: "open" as const,
       imageUrl: "https://images.unsplash.com/photo-1493962853295-0fd70327578a?auto=format&fit=crop&w=600&q=80",
     },
     {
@@ -42,7 +42,7 @@ const Seats = () => {
       isPaid: true,
       teamName: "Apex Motorsport",
       teamLogo: undefined,
-      status: "open",
+      status: "open" as const,
       imageUrl: "https://images.unsplash.com/photo-1550614435-f093a3d9fdc6?auto=format&fit=crop&w=600&q=80",
     },
     {
@@ -56,7 +56,7 @@ const Seats = () => {
       isPaid: true,
       teamName: "FastLane Racing",
       teamLogo: undefined,
-      status: "open",
+      status: "open" as const,
       imageUrl: "https://images.unsplash.com/photo-1626511718772-5254b8e9d603?auto=format&fit=crop&w=600&q=80",
     }
   ];

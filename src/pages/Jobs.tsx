@@ -31,7 +31,7 @@ const Jobs = () => {
       endDate: "2025-10-30",
       payRate: 85000,
       isFullTime: true,
-      status: "open",
+      status: "open" as const,
     },
     {
       id: "2",
@@ -43,7 +43,7 @@ const Jobs = () => {
       endDate: "2025-09-15",
       payRate: 350,
       isFullTime: false,
-      status: "open",
+      status: "open" as const,
     },
     {
       id: "3",
@@ -55,7 +55,7 @@ const Jobs = () => {
       endDate: "2025-07-10",
       payRate: 500,
       isFullTime: false,
-      status: "open",
+      status: "open" as const,
     }
   ];
 
