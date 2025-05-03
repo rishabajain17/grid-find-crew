@@ -11,6 +11,8 @@ import Register from "./pages/Register";
 import TeamDashboard from "./pages/dashboard/TeamDashboard";
 import DriverDashboard from "./pages/dashboard/DriverDashboard";
 import EngineerDashboard from "./pages/dashboard/EngineerDashboard";
+import Seats from "./pages/Seats";
+import Jobs from "./pages/Jobs";
 import SeatDetail from "./pages/SeatDetail";
 import JobDetail from "./pages/JobDetail";
 import PostSeat from "./pages/PostSeat";
@@ -31,6 +33,8 @@ const App = () => (
           <Route path="/dashboard/team" element={<TeamDashboard />} />
           <Route path="/dashboard/driver" element={<DriverDashboard />} />
           <Route path="/dashboard/engineer" element={<EngineerDashboard />} />
+          <Route path="/seats" element={<Seats />} />
+          <Route path="/jobs" element={<Jobs />} />
           <Route path="/seats/:id" element={<SeatDetail />} />
           <Route path="/jobs/:id" element={<JobDetail />} />
           <Route path="/post-seat" element={<PostSeat />} />

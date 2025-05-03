@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const PostJob = () => {
   const navigate = useNavigate();
@@ -20,7 +21,8 @@ const PostJob = () => {
     startDate: "",
     endDate: "",
     payRate: "",
-    isFullTime: "true", // string for radio buttons
+    employmentType: "full-time", // "full-time", "per-event", "per-weekend"
+    paymentTerm: "annual", // "annual", "per-day", "per-weekend", "per-event"
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -31,6 +33,44 @@ const PostJob = () => {
         [field]: e.target.value,
       });
     };
+
+  const handleEmploymentTypeChange = (value: string) => {
+    let paymentTerm = "annual";
+    
+    if (value === "per-event") {
+      paymentTerm = "per-event";
+    } else if (value === "per-weekend") {
+      paymentTerm = "per-weekend";
+    }
+    
+    setFormData({
+      ...formData,
+      employmentType: value,
+      paymentTerm: paymentTerm,
+    });
+  };
+
+  const handlePaymentTermChange = (value: string) => {
+    setFormData({
+      ...formData, 
+      paymentTerm: value
+    });
+  };
+
+  const getPayRatePlaceholder = () => {
+    switch(formData.paymentTerm) {
+      case "annual":
+        return "e.g. 85000";
+      case "per-day":
+        return "e.g. 500";
+      case "per-weekend":
+        return "e.g. 1500";
+      case "per-event":
+        return "e.g. 2500";
+      default:
+        return "Enter amount";
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,31 +188,57 @@ const PostJob = () => {
             <div className="space-y-4">
               <Label>Employment Type <span className="text-red-500">*</span></Label>
               <RadioGroup
-                defaultValue="true"
-                value={formData.isFullTime}
-                onValueChange={(value) => setFormData({ ...formData, isFullTime: value })}
-                className="flex space-x-4"
+                value={formData.employmentType}
+                onValueChange={handleEmploymentTypeChange}
+                className="flex flex-col space-y-2"
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="true" id="full-time" />
+                  <RadioGroupItem value="full-time" id="full-time" />
                   <Label htmlFor="full-time" className="cursor-pointer">Full-time</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="false" id="contract" />
-                  <Label htmlFor="contract" className="cursor-pointer">Contract / Per-event</Label>
+                  <RadioGroupItem value="per-weekend" id="per-weekend" />
+                  <Label htmlFor="per-weekend" className="cursor-pointer">Per-weekend</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="per-event" id="per-event" />
+                  <Label htmlFor="per-event" className="cursor-pointer">Per-event</Label>
                 </div>
               </RadioGroup>
             </div>
             
+            {formData.employmentType === "full-time" && (
+              <div className="space-y-4">
+                <Label>Payment Term <span className="text-red-500">*</span></Label>
+                <RadioGroup
+                  value={formData.paymentTerm}
+                  onValueChange={handlePaymentTermChange}
+                  className="flex flex-col space-y-2"
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="annual" id="annual" />
+                    <Label htmlFor="annual" className="cursor-pointer">Annual Salary</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="per-day" id="per-day" />
+                    <Label htmlFor="per-day" className="cursor-pointer">Day Rate</Label>
+                  </div>
+                </RadioGroup>
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="payRate">
-                {formData.isFullTime === "true" ? "Annual Salary (USD)" : "Day Rate (USD)"}
+                {formData.paymentTerm === "annual" && "Annual Salary (USD)"}
+                {formData.paymentTerm === "per-day" && "Day Rate (USD)"}
+                {formData.paymentTerm === "per-weekend" && "Weekend Rate (USD)"}
+                {formData.paymentTerm === "per-event" && "Event Rate (USD)"}
                 <span className="text-red-500">*</span>
               </Label>
               <Input
                 id="payRate"
                 type="number"
-                placeholder={formData.isFullTime === "true" ? "e.g. 85000" : "e.g. 500"}
+                placeholder={getPayRatePlaceholder()}
                 value={formData.payRate}
                 onChange={handleChange("payRate")}
                 required
