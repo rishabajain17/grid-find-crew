@@ -34,6 +34,39 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [userType, setUserType] = useState<UserType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Enhanced fetchProfile function to be reused
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        return null;
+      }
+
+      if (profileData) {
+        const userProfile = {
+          id: profileData.id,
+          full_name: profileData.full_name,
+          avatar_url: profileData.avatar_url,
+          user_type: profileData.user_type,
+        };
+        
+        setProfile(userProfile);
+        setUserType(profileData.user_type);
+        return userProfile;
+      }
+      return null;
+    } catch (error) {
+      console.error('Profile fetch error:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchUser = async () => {
       setIsLoading(true);
@@ -44,6 +77,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setUser(null);
           setProfile(null);
           setUserType(null);
+          setIsLoading(false);
           return;
         }
 
@@ -53,23 +87,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
 
         // Get profile data
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (profileError) {
-          console.error('Error fetching profile:', profileError);
-        } else if (profileData) {
-          setProfile({
-            id: profileData.id,
-            full_name: profileData.full_name,
-            avatar_url: profileData.avatar_url,
-            user_type: profileData.user_type,
-          });
-          setUserType(profileData.user_type);
-        }
+        await fetchProfile(user.id);
       } catch (error) {
         console.error('Auth error:', error);
       } finally {
@@ -82,6 +100,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        
         if (session && session.user) {
           setUser({
             id: session.user.id,
@@ -89,21 +109,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           });
 
           // Fetch profile on auth change
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profileData) {
-            setProfile({
-              id: profileData.id,
-              full_name: profileData.full_name,
-              avatar_url: profileData.avatar_url,
-              user_type: profileData.user_type,
-            });
-            setUserType(profileData.user_type);
-          }
+          await fetchProfile(session.user.id);
         } else {
           setUser(null);
           setProfile(null);
@@ -120,8 +126,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      return { error };
+      const { error, data } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (error) {
+        return { error };
+      }
+      
+      // Immediately fetch profile data to ensure userType is available
+      if (data?.user) {
+        await fetchProfile(data.user.id);
+      }
+      
+      return { error: null };
     } catch (error) {
       return { error };
     }

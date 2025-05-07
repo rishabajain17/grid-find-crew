@@ -1,56 +1,94 @@
 
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import DashboardLayout from "@/components/DashboardLayout";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const TeamDashboard = () => {
-  // Sample data for team dashboard
-  const [seats] = useState([
-    {
-      id: "1",
-      carType: "GT4 - Mercedes AMG",
-      eventName: "European GT Challenge",
-      location: "Spa-Francorchamps, Belgium",
-      startDate: "2025-07-10",
-      endDate: "2025-07-12",
-      status: "open" as const,
-      applicants: 4,
-    },
-    {
-      id: "2",
-      carType: "Formula 4",
-      eventName: "F4 British Championship",
-      location: "Silverstone, UK",
-      startDate: "2025-06-05",
-      endDate: "2025-06-07",
-      status: "pending" as const,
-      applicants: 7,
-    },
-  ]);
+  const { user, profile } = useAuth();
+  const navigate = useNavigate();
 
-  const [jobs] = useState([
-    {
-      id: "1",
-      roleTitle: "Race Engineer",
-      location: "Milton Keynes, UK",
-      startDate: "2025-06-01",
-      endDate: "2025-10-30",
-      status: "open" as const,
-      applicants: 12,
+  // Redirect if not logged in or not a team
+  useEffect(() => {
+    if (!user) {
+      navigate('/login', { state: { from: '/dashboard/team' } });
+      return;
+    }
+    
+    if (profile && profile.user_type !== 'team') {
+      toast.error("Only team accounts can access this dashboard");
+      navigate('/');
+    }
+  }, [user, profile, navigate]);
+
+  // Fetch team's race seats
+  const { data: seats = [], isLoading: seatsLoading } = useQuery({
+    queryKey: ['teamSeats', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('seats')
+        .select('*')
+        .eq('team_id', user.id);
+        
+      if (error) {
+        toast.error('Failed to load race seat listings');
+        console.error('Error fetching team seats:', error);
+        return [];
+      }
+      
+      return data.map(seat => ({
+        id: seat.id,
+        carType: seat.car_type,
+        eventName: seat.event_name,
+        location: seat.location,
+        startDate: seat.date_start,
+        endDate: seat.date_end,
+        status: seat.status,
+        // For a real app, fetch the actual count of applicants from a join table
+        applicants: Math.floor(Math.random() * 10) // Placeholder - simulate random applicants
+      }));
     },
-    {
-      id: "2",
-      roleTitle: "Data Analyst",
-      location: "Stuttgart, Germany",
-      startDate: "2025-05-15",
-      endDate: "2025-09-15",
-      status: "filled" as const,
-      applicants: 9,
+    enabled: !!user?.id
+  });
+
+  // Fetch team's job listings
+  const { data: jobs = [], isLoading: jobsLoading } = useQuery({
+    queryKey: ['teamJobs', user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      
+      const { data, error } = await supabase
+        .from('jobs')
+        .select('*')
+        .eq('team_id', user.id);
+        
+      if (error) {
+        toast.error('Failed to load job listings');
+        console.error('Error fetching team jobs:', error);
+        return [];
+      }
+      
+      return data.map(job => ({
+        id: job.id,
+        roleTitle: job.title,
+        location: job.location,
+        startDate: job.date_start,
+        endDate: job.date_end,
+        status: job.status,
+        // For a real app, fetch the actual count of applicants from a join table
+        applicants: Math.floor(Math.random() * 15) // Placeholder - simulate random applicants
+      }));
     },
-  ]);
+    enabled: !!user?.id
+  });
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -77,7 +115,9 @@ const TeamDashboard = () => {
   return (
     <DashboardLayout title="Team Dashboard" userType="team">
       <div className="mb-8">
-        <h2 className="text-2xl font-display font-bold mb-4">Welcome, Velocity Racing Team</h2>
+        <h2 className="text-2xl font-display font-bold mb-4">
+          Welcome, {profile?.full_name || "Team Member"}
+        </h2>
         <p className="text-gray-600">
           Manage your race seat listings and engineering job postings.
         </p>
@@ -90,7 +130,9 @@ const TeamDashboard = () => {
             <CardDescription>Currently posted race seats</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-racing-red">{seats.filter(seat => seat.status === "open").length}</div>
+            <div className="text-3xl font-bold text-racing-red">
+              {seatsLoading ? "..." : seats.filter(seat => seat.status === "open").length}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -99,7 +141,9 @@ const TeamDashboard = () => {
             <CardDescription>Currently posted job positions</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-racing-blue">{jobs.filter(job => job.status === "open").length}</div>
+            <div className="text-3xl font-bold text-racing-blue">
+              {jobsLoading ? "..." : jobs.filter(job => job.status === "open").length}
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -109,8 +153,10 @@ const TeamDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-racing-navy">
-              {seats.reduce((total, seat) => total + seat.applicants, 0) + 
-                jobs.reduce((total, job) => total + job.applicants, 0)}
+              {seatsLoading || jobsLoading ? "..." : 
+                seats.reduce((total, seat) => total + seat.applicants, 0) + 
+                jobs.reduce((total, job) => total + job.applicants, 0)
+              }
             </div>
           </CardContent>
         </Card>
@@ -145,92 +191,128 @@ const TeamDashboard = () => {
         </TabsList>
         
         <TabsContent value="seats">
-          <div className="bg-white rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left font-medium">Car & Event</th>
-                    <th className="px-6 py-3 text-left font-medium">Date</th>
-                    <th className="px-6 py-3 text-left font-medium">Location</th>
-                    <th className="px-6 py-3 text-left font-medium">Status</th>
-                    <th className="px-6 py-3 text-left font-medium">Applicants</th>
-                    <th className="px-6 py-3 text-right font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {seats.map((seat) => (
-                    <tr key={seat.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">{seat.carType}</div>
-                        <div className="text-gray-500">{seat.eventName}</div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        {formatDate(seat.startDate)} - {formatDate(seat.endDate)}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">{seat.location}</td>
-                      <td className="px-6 py-4">{statusBadge(seat.status)}</td>
-                      <td className="px-6 py-4">
-                        <span className="font-medium">{seat.applicants}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Link
-                          to={`/seats/${seat.id}/manage`}
-                          className="text-racing-red hover:text-racing-red/80 font-medium text-sm"
-                        >
-                          Manage
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {seatsLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-racing-red"></div>
             </div>
-          </div>
+          ) : seats.length > 0 ? (
+            <div className="bg-white rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-700">
+                    <tr>
+                      <th className="px-6 py-3 text-left font-medium">Car & Event</th>
+                      <th className="px-6 py-3 text-left font-medium">Date</th>
+                      <th className="px-6 py-3 text-left font-medium">Location</th>
+                      <th className="px-6 py-3 text-left font-medium">Status</th>
+                      <th className="px-6 py-3 text-left font-medium">Applicants</th>
+                      <th className="px-6 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {seats.map((seat) => (
+                      <tr key={seat.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-gray-900">{seat.carType}</div>
+                          <div className="text-gray-500">{seat.eventName}</div>
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">
+                          {formatDate(seat.startDate)} - {formatDate(seat.endDate)}
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">{seat.location}</td>
+                        <td className="px-6 py-4">{statusBadge(seat.status)}</td>
+                        <td className="px-6 py-4">
+                          <span className="font-medium">{seat.applicants}</span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Link
+                            to={`/seats/${seat.id}/manage`}
+                            className="text-racing-red hover:text-racing-red/80 font-medium text-sm"
+                          >
+                            Manage
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg p-8 text-center">
+              <p className="text-gray-500 mb-4">You haven't posted any race seats yet.</p>
+              <Link to="/post-seat">
+                <Button className="bg-racing-red hover:bg-racing-red/90">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                  </svg>
+                  Post Your First Seat
+                </Button>
+              </Link>
+            </div>
+          )}
         </TabsContent>
         
         <TabsContent value="jobs">
-          <div className="bg-white rounded-lg overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-gray-700">
-                  <tr>
-                    <th className="px-6 py-3 text-left font-medium">Role</th>
-                    <th className="px-6 py-3 text-left font-medium">Date</th>
-                    <th className="px-6 py-3 text-left font-medium">Location</th>
-                    <th className="px-6 py-3 text-left font-medium">Status</th>
-                    <th className="px-6 py-3 text-left font-medium">Applicants</th>
-                    <th className="px-6 py-3 text-right font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {jobs.map((job) => (
-                    <tr key={job.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="font-medium text-gray-900">{job.roleTitle}</div>
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">
-                        {formatDate(job.startDate)} - {formatDate(job.endDate)}
-                      </td>
-                      <td className="px-6 py-4 text-gray-700">{job.location}</td>
-                      <td className="px-6 py-4">{statusBadge(job.status)}</td>
-                      <td className="px-6 py-4">
-                        <span className="font-medium">{job.applicants}</span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <Link
-                          to={`/jobs/${job.id}/manage`}
-                          className="text-racing-blue hover:text-racing-blue/80 font-medium text-sm"
-                        >
-                          Manage
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          {jobsLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-racing-blue"></div>
             </div>
-          </div>
+          ) : jobs.length > 0 ? (
+            <div className="bg-white rounded-lg overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="bg-gray-50 text-gray-700">
+                    <tr>
+                      <th className="px-6 py-3 text-left font-medium">Role</th>
+                      <th className="px-6 py-3 text-left font-medium">Date</th>
+                      <th className="px-6 py-3 text-left font-medium">Location</th>
+                      <th className="px-6 py-3 text-left font-medium">Status</th>
+                      <th className="px-6 py-3 text-left font-medium">Applicants</th>
+                      <th className="px-6 py-3 text-right font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {jobs.map((job) => (
+                      <tr key={job.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-gray-900">{job.roleTitle}</div>
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">
+                          {formatDate(job.startDate)} - {formatDate(job.endDate)}
+                        </td>
+                        <td className="px-6 py-4 text-gray-700">{job.location}</td>
+                        <td className="px-6 py-4">{statusBadge(job.status)}</td>
+                        <td className="px-6 py-4">
+                          <span className="font-medium">{job.applicants}</span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Link
+                            to={`/jobs/${job.id}/manage`}
+                            className="text-racing-blue hover:text-racing-blue/80 font-medium text-sm"
+                          >
+                            Manage
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg p-8 text-center">
+              <p className="text-gray-500 mb-4">You haven't posted any engineering jobs yet.</p>
+              <Link to="/post-job">
+                <Button className="bg-racing-blue hover:bg-racing-blue/90">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                  </svg>
+                  Post Your First Job
+                </Button>
+              </Link>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </DashboardLayout>

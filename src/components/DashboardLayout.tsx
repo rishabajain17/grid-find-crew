@@ -3,6 +3,7 @@ import { ReactNode, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/context/AuthContext";
 
 interface SidebarLinkProps {
   to: string;
@@ -35,6 +36,7 @@ const DashboardLayout = ({ children, title, userType }: DashboardLayoutProps) =>
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+  const { signOut, user } = useAuth();
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -153,8 +155,8 @@ const DashboardLayout = ({ children, title, userType }: DashboardLayoutProps) =>
     }
   };
 
-  const handleLogout = () => {
-    // In a real app, we would handle logout logic here
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
 
@@ -173,7 +175,7 @@ const DashboardLayout = ({ children, title, userType }: DashboardLayoutProps) =>
             </div>
             {isSidebarOpen && (
               <span className="ml-2 text-xl font-display font-semibold text-racing-navy">
-                Race<span className="text-racing-red">Platform</span>
+                Race<span className="text-racing-red">connect</span>
               </span>
             )}
           </Link>
@@ -269,7 +271,7 @@ const DashboardLayout = ({ children, title, userType }: DashboardLayoutProps) =>
                 </svg>
               </button>
               <div className="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                <span className="font-medium text-sm">JD</span>
+                <span className="font-medium text-sm">{user?.email?.charAt(0).toUpperCase() || 'U'}</span>
               </div>
             </div>
           </div>

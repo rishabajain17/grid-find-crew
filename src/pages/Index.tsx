@@ -1,84 +1,126 @@
 
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SeatCard from "@/components/SeatCard";
 import JobCard from "@/components/JobCard";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const Index = () => {
-  // Sample data for featured listings
-  const featuredSeats = [
-    {
-      id: "1",
-      carType: "GT4 - Mercedes AMG",
-      eventName: "European GT Challenge",
-      location: "Spa-Francorchamps, Belgium",
-      startDate: "2025-07-10",
-      endDate: "2025-07-12",
-      price: 15000,
-      teamName: "Velocity Racing",
-      status: "open" as const,
-    },
-    {
-      id: "2",
-      carType: "Formula 4",
-      eventName: "F4 British Championship",
-      location: "Silverstone, UK",
-      startDate: "2025-06-05",
-      endDate: "2025-06-07",
-      price: 8500,
-      teamName: "Apex Motorsport",
-      status: "open" as const,
-    },
-    {
-      id: "3",
-      carType: "LMP3 Prototype",
-      eventName: "European Le Mans Series",
-      location: "Monza, Italy",
-      startDate: "2025-08-15",
-      endDate: "2025-08-17",
-      price: 22000,
-      teamName: "Endurance Pro Team",
-      status: "open" as const,
-    },
-  ];
+  // Fetch featured seats from Supabase
+  const { data: featuredSeats, isLoading: seatsLoading } = useQuery({
+    queryKey: ['featuredSeats'],
+    queryFn: async () => {
+      const { data: seatsData, error: seatsError } = await supabase
+        .from('seats')
+        .select(`
+          id,
+          car_type,
+          event_name,
+          location,
+          date_start,
+          date_end,
+          price,
+          team_id,
+          status
+        `)
+        .eq('status', 'open')
+        .limit(3);
 
-  const featuredJobs = [
-    {
-      id: "1",
-      roleTitle: "Race Engineer",
-      teamName: "Velocity Racing",
-      location: "Milton Keynes, UK",
-      startDate: "2025-06-01",
-      endDate: "2025-10-30",
-      payRate: 85000,
-      isFullTime: true,
-      status: "open" as const,
+      if (seatsError) {
+        console.error('Error fetching featured seats:', seatsError);
+        toast.error('Failed to load featured race seats');
+        return [];
+      }
+
+      // Get team info for each seat
+      const seatsWithTeamInfo = await Promise.all(
+        seatsData.map(async (seat) => {
+          const { data: teamData } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', seat.team_id)
+            .single();
+
+          return {
+            id: seat.id,
+            carType: seat.car_type,
+            eventName: seat.event_name,
+            location: seat.location,
+            startDate: seat.date_start,
+            endDate: seat.date_end,
+            price: seat.price,
+            teamName: teamData?.full_name || 'Unknown Team',
+            teamLogo: teamData?.avatar_url,
+            status: seat.status,
+          };
+        })
+      );
+
+      return seatsWithTeamInfo;
     },
-    {
-      id: "2",
-      roleTitle: "Data Analyst",
-      teamName: "Apex Motorsport",
-      location: "Stuttgart, Germany",
-      startDate: "2025-05-15",
-      endDate: "2025-09-15",
-      payRate: 450,
-      isFullTime: false,
-      status: "open" as const,
+    refetchOnWindowFocus: false
+  });
+
+  // Fetch featured jobs from Supabase
+  const { data: featuredJobs, isLoading: jobsLoading } = useQuery({
+    queryKey: ['featuredJobs'],
+    queryFn: async () => {
+      const { data: jobsData, error: jobsError } = await supabase
+        .from('jobs')
+        .select(`
+          id,
+          title,
+          location,
+          date_start,
+          date_end,
+          pay_rate,
+          payment_term,
+          team_id,
+          status
+        `)
+        .eq('status', 'open')
+        .limit(3);
+
+      if (jobsError) {
+        console.error('Error fetching featured jobs:', jobsError);
+        toast.error('Failed to load featured engineering jobs');
+        return [];
+      }
+
+      // Get team info for each job
+      const jobsWithTeamInfo = await Promise.all(
+        jobsData.map(async (job) => {
+          const { data: teamData } = await supabase
+            .from('profiles')
+            .select('full_name, avatar_url')
+            .eq('id', job.team_id)
+            .single();
+
+          return {
+            id: job.id,
+            roleTitle: job.title,
+            teamName: teamData?.full_name || 'Unknown Team',
+            teamLogo: teamData?.avatar_url,
+            location: job.location,
+            startDate: job.date_start,
+            endDate: job.date_end,
+            payRate: job.pay_rate,
+            isFullTime: job.payment_term === 'annual',
+            paymentTerm: job.payment_term,
+            status: job.status,
+          };
+        })
+      );
+
+      return jobsWithTeamInfo;
     },
-    {
-      id: "3",
-      roleTitle: "Performance Engineer",
-      teamName: "Endurance Pro Team",
-      location: "Maranello, Italy",
-      startDate: "2025-06-01",
-      endDate: "2025-12-31",
-      payRate: 92000,
-      isFullTime: true,
-      status: "open" as const,
-    },
-  ];
+    refetchOnWindowFocus: false
+  });
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -119,7 +161,7 @@ const Index = () => {
             <div className="text-center mb-16">
               <h2 className="text-3xl md:text-4xl font-display font-bold mb-4">How It Works</h2>
               <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-                RacePlatform brings together all key stakeholders in motorsport to create
+                RaceConnext brings together all key stakeholders in motorsport to create
                 a seamless experience for teams, drivers, and engineers.
               </p>
             </div>
@@ -179,9 +221,19 @@ const Index = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredSeats.map((seat) => (
-                <SeatCard key={seat.id} {...seat} />
-              ))}
+              {seatsLoading ? (
+                <div className="col-span-3 flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-racing-red"></div>
+                </div>
+              ) : featuredSeats && featuredSeats.length > 0 ? (
+                featuredSeats.map((seat) => (
+                  <SeatCard key={seat.id} {...seat} />
+                ))
+              ) : (
+                <div className="col-span-3 text-center py-8">
+                  <p className="text-gray-500">No race seats available at the moment.</p>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -197,9 +249,19 @@ const Index = () => {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featuredJobs.map((job) => (
-                <JobCard key={job.id} {...job} />
-              ))}
+              {jobsLoading ? (
+                <div className="col-span-3 flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-racing-blue"></div>
+                </div>
+              ) : featuredJobs && featuredJobs.length > 0 ? (
+                featuredJobs.map((job) => (
+                  <JobCard key={job.id} {...job} />
+                ))
+              ) : (
+                <div className="col-span-3 text-center py-8">
+                  <p className="text-gray-500">No engineering jobs available at the moment.</p>
+                </div>
+              )}
             </div>
           </div>
         </section>

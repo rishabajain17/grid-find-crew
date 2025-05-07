@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,28 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, userType } = useAuth();
+  const { signIn, userType, user } = useAuth();
   
   const from = location.state?.from || "/";
+
+  // Effect to handle redirect when user and userType become available
+  useEffect(() => {
+    if (user && userType) {
+      console.log("User and userType detected, redirecting. UserType:", userType);
+      
+      if (from !== "/") {
+        navigate(from);
+      } else if (userType === 'team') {
+        navigate('/dashboard/team');
+      } else if (userType === 'driver') {
+        navigate('/dashboard/driver');
+      } else if (userType === 'engineer') {
+        navigate('/dashboard/engineer');
+      } else {
+        navigate('/');
+      }
+    }
+  }, [user, userType, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -38,22 +57,7 @@ const Login = () => {
       }
       
       toast.success("Signed in successfully!");
-      console.log("Sign-in successful, userType:", userType);
-      
-      // Redirect logic based on user type with a slight delay to ensure userType is updated
-      setTimeout(() => {
-        if (from !== "/") {
-          navigate(from);
-        } else if (userType === 'team') {
-          navigate('/dashboard/team');
-        } else if (userType === 'driver') {
-          navigate('/dashboard/driver');
-        } else if (userType === 'engineer') {
-          navigate('/dashboard/engineer');
-        } else {
-          navigate('/');
-        }
-      }, 100);
+      // Redirection is now handled by the useEffect
       
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
