@@ -38,19 +38,22 @@ const Login = () => {
       }
       
       toast.success("Signed in successfully!");
+      console.log("Sign-in successful, userType:", userType);
       
-      // Redirect to the page user was trying to access, or based on user type
-      if (from !== "/") {
-        navigate(from);
-      } else if (userType === 'team') {
-        navigate('/dashboard/team');
-      } else if (userType === 'driver') {
-        navigate('/dashboard/driver');
-      } else if (userType === 'engineer') {
-        navigate('/dashboard/engineer');
-      } else {
-        navigate('/');
-      }
+      // Redirect logic based on user type with a slight delay to ensure userType is updated
+      setTimeout(() => {
+        if (from !== "/") {
+          navigate(from);
+        } else if (userType === 'team') {
+          navigate('/dashboard/team');
+        } else if (userType === 'driver') {
+          navigate('/dashboard/driver');
+        } else if (userType === 'engineer') {
+          navigate('/dashboard/engineer');
+        } else {
+          navigate('/');
+        }
+      }, 100);
       
     } catch (error: any) {
       toast.error(error.message || "An error occurred");

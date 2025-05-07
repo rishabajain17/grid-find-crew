@@ -1,12 +1,33 @@
 
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogOut, User } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // Will be replaced with actual auth
+  const { user, signOut, userType } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  // Determine dashboard URL based on user type
+  const getDashboardUrl = () => {
+    switch (userType) {
+      case 'team':
+        return '/dashboard/team';
+      case 'driver':
+        return '/dashboard/driver';
+      case 'engineer':
+        return '/dashboard/engineer';
+      default:
+        return '/';
+    }
+  };
 
   return (
     <nav className="bg-white shadow-sm border-b">
@@ -37,10 +58,23 @@ const Navbar = () => {
             </div>
           </div>
           <div className="hidden md:flex md:items-center md:space-x-4">
-            {isLoggedIn ? (
-              <Link to="/dashboard/team">
-                <Button variant="ghost">Dashboard</Button>
-              </Link>
+            {user ? (
+              <>
+                <Link to={getDashboardUrl()}>
+                  <Button variant="ghost" className="flex items-center space-x-2">
+                    <User size={18} />
+                    <span>Dashboard</span>
+                  </Button>
+                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="text-gray-700 hover:text-racing-red flex items-center space-x-2"
+                  onClick={handleSignOut}
+                >
+                  <LogOut size={18} />
+                  <span>Sign Out</span>
+                </Button>
+              </>
             ) : (
               <>
                 <Link to="/login">
@@ -100,14 +134,26 @@ const Navbar = () => {
             >
               About
             </Link>
-            {isLoggedIn ? (
-              <Link
-                to="/dashboard/team"
-                className="block px-3 py-2 rounded-md text-base font-medium text-white bg-racing-red"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Dashboard
-              </Link>
+            
+            {user ? (
+              <>
+                <Link
+                  to={getDashboardUrl()}
+                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Dashboard
+                </Link>
+                <button
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-700 hover:bg-gray-50"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleSignOut();
+                  }}
+                >
+                  Sign Out
+                </button>
+              </>
             ) : (
               <>
                 <Link
