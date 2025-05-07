@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Input } from "@/components/ui/input";
@@ -10,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { UserType } from "@/types/database.types";
 
 interface Message {
   id: string;
@@ -26,7 +26,7 @@ interface Conversation {
   recipientId: string;
   recipientName: string;
   recipientAvatar?: string;
-  recipientType: "driver" | "engineer";
+  recipientType: UserType;
   relatedToId?: string;
   relatedToType?: "seat" | "job";
   relatedToTitle?: string;
@@ -130,7 +130,7 @@ const TeamMessages = () => {
             recipientId: userId,
             recipientName: profile.full_name || profile.username || 'Unknown User',
             recipientAvatar: profile.avatar_url || undefined,
-            recipientType: profile.user_type as "driver" | "engineer",
+            recipientType: profile.user_type as UserType,
             lastMessage: lastMessage?.content || '',
             lastMessageTime: lastMessage?.created_at || new Date().toISOString(),
             unreadCount: unreadCount,
@@ -189,7 +189,7 @@ const TeamMessages = () => {
       .subscribe();
       
     return () => {
-      subscription.unsubscribe();
+      supabase.removeChannel(subscription);
     };
   }, [currentUser, queryClient]);
 
