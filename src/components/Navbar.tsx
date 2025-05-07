@@ -18,7 +18,7 @@ const Navbar = () => {
                 <span className="text-white font-display font-bold">R</span>
               </div>
               <span className="ml-2 text-xl font-display font-semibold text-racing-navy">
-                Race<span className="text-racing-red">Platform</span>
+                Race<span className="text-racing-red">connect</span>
               </span>
             </Link>
             <div className="hidden md:ml-10 md:flex md:space-x-8">
