@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
@@ -31,36 +32,38 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/dashboard/team" element={<TeamDashboard />} />
-          <Route path="/dashboard/team/applications" element={<TeamApplications />} />
-          <Route path="/dashboard/team/messages" element={<TeamMessages />} />
-          <Route path="/dashboard/driver" element={<DriverDashboard />} />
-          <Route path="/dashboard/driver/applications" element={<DriverApplications />} />
-          <Route path="/dashboard/driver/saved" element={<DriverSaved />} />
-          <Route path="/dashboard/driver/messages" element={<DriverMessages />} />
-          <Route path="/dashboard/engineer" element={<EngineerDashboard />} />
-          <Route path="/dashboard/engineer/applications" element={<EngineerApplications />} />
-          <Route path="/dashboard/engineer/saved" element={<EngineerSaved />} />
-          <Route path="/dashboard/engineer/messages" element={<EngineerMessages />} />
-          <Route path="/seats" element={<Seats />} />
-          <Route path="/jobs" element={<Jobs />} />
-          <Route path="/seats/:id" element={<SeatDetail />} />
-          <Route path="/jobs/:id" element={<JobDetail />} />
-          <Route path="/post-seat" element={<PostSeat />} />
-          <Route path="/post-job" element={<PostJob />} />
-          <Route path="/about" element={<About />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <AuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/dashboard/team" element={<TeamDashboard />} />
+            <Route path="/dashboard/team/applications" element={<TeamApplications />} />
+            <Route path="/dashboard/team/messages" element={<TeamMessages />} />
+            <Route path="/dashboard/driver" element={<DriverDashboard />} />
+            <Route path="/dashboard/driver/applications" element={<DriverApplications />} />
+            <Route path="/dashboard/driver/saved" element={<DriverSaved />} />
+            <Route path="/dashboard/driver/messages" element={<DriverMessages />} />
+            <Route path="/dashboard/engineer" element={<EngineerDashboard />} />
+            <Route path="/dashboard/engineer/applications" element={<EngineerApplications />} />
+            <Route path="/dashboard/engineer/saved" element={<EngineerSaved />} />
+            <Route path="/dashboard/engineer/messages" element={<EngineerMessages />} />
+            <Route path="/seats" element={<Seats />} />
+            <Route path="/jobs" element={<Jobs />} />
+            <Route path="/seats/:id" element={<SeatDetail />} />
+            <Route path="/jobs/:id" element={<JobDetail />} />
+            <Route path="/post-seat" element={<PostSeat />} />
+            <Route path="/post-job" element={<PostJob />} />
+            <Route path="/about" element={<About />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </AuthProvider>
   </QueryClientProvider>
 );
 

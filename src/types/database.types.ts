@@ -7,9 +7,9 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-export type UserType = 'driver' | 'engineer' | 'team'
-export type JobStatus = 'open' | 'pending' | 'filled'
-export type SeatStatus = 'open' | 'pending' | 'filled'
+export type UserType = 'driver' | 'engineer' | 'team' | 'admin'
+export type ListingStatus = 'open' | 'pending' | 'filled'
+export type ListingType = 'seat' | 'job'
 
 export interface Database {
   public: {
@@ -19,7 +19,6 @@ export interface Database {
           id: string
           created_at: string
           updated_at: string
-          username: string | null
           avatar_url: string | null
           user_type: UserType | null
           full_name: string | null
@@ -30,12 +29,12 @@ export interface Database {
           experience_years: number | null
           expertise: string[] | null
           achievements: string[] | null
+          role_id: number | null
         }
         Insert: {
           id: string
           created_at?: string
           updated_at?: string
-          username?: string | null
           avatar_url?: string | null
           user_type?: UserType | null
           full_name?: string | null
@@ -46,12 +45,12 @@ export interface Database {
           experience_years?: number | null
           expertise?: string[] | null
           achievements?: string[] | null
+          role_id?: number | null
         }
         Update: {
           id?: string
           created_at?: string
           updated_at?: string
-          username?: string | null
           avatar_url?: string | null
           user_type?: UserType | null
           full_name?: string | null
@@ -62,8 +61,17 @@ export interface Database {
           experience_years?: number | null
           expertise?: string[] | null
           achievements?: string[] | null
+          role_id?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "roles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       messages: {
         Row: {
@@ -109,19 +117,188 @@ export interface Database {
             referencedColumns: ["id"]
           }
         ]
+      },
+      roles: {
+        Row: {
+          id: number
+          name: UserType
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          name: UserType
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          name?: UserType
+          created_at?: string
+        }
+        Relationships: []
+      },
+      seats: {
+        Row: {
+          id: string
+          team_id: string
+          car_type: string
+          event_name: string
+          location: string
+          date_start: string
+          date_end: string
+          price: number
+          requirements: string | null
+          media_urls: string[] | null
+          status: ListingStatus
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          car_type: string
+          event_name: string
+          location: string
+          date_start: string
+          date_end: string
+          price: number
+          requirements?: string | null
+          media_urls?: string[] | null
+          status?: ListingStatus
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          car_type?: string
+          event_name?: string
+          location?: string
+          date_start?: string
+          date_end?: string
+          price?: number
+          requirements?: string | null
+          media_urls?: string[] | null
+          status?: ListingStatus
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "seats_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
+      jobs: {
+        Row: {
+          id: string
+          team_id: string
+          title: string
+          description: string
+          skills: string[] | null
+          date_start: string
+          date_end: string | null
+          pay_rate: number
+          payment_term: string
+          location: string
+          media_urls: string[] | null
+          status: ListingStatus
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          team_id: string
+          title: string
+          description: string
+          skills?: string[] | null
+          date_start: string
+          date_end?: string | null
+          pay_rate: number
+          payment_term: string
+          location: string
+          media_urls?: string[] | null
+          status?: ListingStatus
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          team_id?: string
+          title?: string
+          description?: string
+          skills?: string[] | null
+          date_start?: string
+          date_end?: string | null
+          pay_rate?: number
+          payment_term?: string
+          location?: string
+          media_urls?: string[] | null
+          status?: ListingStatus
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      },
+      applications: {
+        Row: {
+          id: string
+          listing_id: string
+          listing_type: ListingType
+          applicant_id: string
+          message: string | null
+          status: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          listing_id: string
+          listing_type: ListingType
+          applicant_id: string
+          message?: string | null
+          status?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          listing_id?: string
+          listing_type?: ListingType
+          applicant_id?: string
+          message?: string | null
+          status?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "applications_applicant_id_fkey"
+            columns: ["applicant_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
-      // Additional tables would be defined here...
-    }
+    },
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: {
+          user_id: string
+        }
+        Returns: UserType
+      }
     }
     Enums: {
-      user_type: UserType
-      job_status: JobStatus
-      seat_status: SeatStatus
+      user_role: UserType
+      listing_status: ListingStatus
+      listing_type: ListingType
     }
     CompositeTypes: {
       [_ in never]: never
