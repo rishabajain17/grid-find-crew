@@ -15,6 +15,8 @@ interface JobProps {
   isFullTime: boolean;
   paymentTerm?: "annual" | "per-day" | "per-weekend" | "per-event";
   status: "open" | "pending" | "filled";
+  onApply?: () => void;
+  requiresAuth?: boolean;
 }
 
 const JobCard = ({
@@ -29,6 +31,8 @@ const JobCard = ({
   isFullTime,
   paymentTerm = isFullTime ? "annual" : "per-day",
   status,
+  onApply,
+  requiresAuth,
 }: JobProps) => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);

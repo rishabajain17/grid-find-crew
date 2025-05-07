@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,12 +11,13 @@ import { useAuth } from "@/context/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 
+type ListingStatus = "open" | "pending" | "filled";
+
 interface JobDetail {
   id: string;
   title: string;
   description: string;
-  responsibilities: string;
-  requirements: string;
+  skills: string[]; 
   team_name: string;
   team_logo?: string;
   team_description?: string;
@@ -27,7 +27,7 @@ interface JobDetail {
   pay_rate: number;
   payment_term: string;
   is_full_time: boolean;
-  status: "open" | "pending" | "filled";
+  status: ListingStatus;
   team_id: string;
 }
 
@@ -64,34 +64,35 @@ const JobDetail = () => {
     queryFn: async () => {
       if (!id) throw new Error('Job ID is required');
       
-      const { data: jobData, error } = await supabase
+      // First, fetch the job data
+      const { data: jobData, error: jobError } = await supabase
         .from('jobs')
-        .select(`
-          *,
-          team:team_id (
-            id,
-            profiles:id (
-              full_name,
-              avatar_url,
-              bio
-            )
-          )
-        `)
+        .select('*')
         .eq('id', id)
         .single();
       
-      if (error) throw error;
+      if (jobError) throw jobError;
       if (!jobData) throw new Error('Job not found');
+      
+      // Then, fetch the team profile data separately
+      const { data: teamData, error: teamError } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url, bio')
+        .eq('id', jobData.team_id)
+        .single();
+      
+      if (teamError) {
+        console.error("Error fetching team data:", teamError);
+      }
       
       return {
         id: jobData.id,
         title: jobData.title,
         description: jobData.description || '',
-        responsibilities: jobData.responsibilities || '',
-        requirements: Array.isArray(jobData.skills) ? jobData.skills.join('\n') : '',
-        team_name: jobData.team?.profiles?.full_name || 'Unknown Team',
-        team_logo: jobData.team?.profiles?.avatar_url,
-        team_description: jobData.team?.profiles?.bio || 'No team description available.',
+        skills: jobData.skills || [],
+        team_name: teamData?.full_name || 'Unknown Team',
+        team_logo: teamData?.avatar_url,
+        team_description: teamData?.bio || 'No team description available.',
         location: jobData.location,
         date_start: jobData.date_start,
         date_end: jobData.date_end,
@@ -211,6 +212,8 @@ const JobDetail = () => {
 
   const hasApplied = !!existingApplication;
 
+  const jobSkillsText = Array.isArray(job?.skills) ? job.skills.join('\n') : '';
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -226,184 +229,177 @@ const JobDetail = () => {
             </Link>
           </div>
           
-          <div className="bg-white rounded-xl overflow-hidden shadow-md">
-            {/* Hero Image */}
-            <div className="relative h-64 md:h-80 bg-gradient-to-r from-racing-blue to-racing-blue/70">
-              <div className="absolute inset-0 flex items-center justify-center text-white">
-                <div className="text-center">
-                  <h1 className="text-4xl font-display font-bold mb-2">{job.title}</h1>
-                  <p className="text-xl">{job.team_name}</p>
-                </div>
-              </div>
-              <div className="absolute top-4 right-4 flex space-x-2">
-                <Badge className="bg-racing-blue text-white">{job.status}</Badge>
-                <Badge variant="outline" className="bg-blue-50 text-blue-800">
-                  {job.is_full_time ? "Full-time" : "Contract"}
-                </Badge>
-              </div>
-            </div>
-            
-            {/* Content */}
-            <div className="p-6 md:p-8">
-              <div className="md:flex md:items-start md:justify-between mb-6">
-                <div>
-                  <h1 className="text-3xl font-display font-bold mb-2">{job.title}</h1>
-                  <div className="flex items-center text-gray-700">
-                    <div className="w-6 h-6 bg-gray-200 rounded-full mr-2 flex-shrink-0 overflow-hidden">
-                      {job.team_logo ? (
-                        <img src={job.team_logo} alt={job.team_name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-racing-blue text-white">
-                          {job.team_name.charAt(0)}
-                        </div>
-                      )}
-                    </div>
-                    <span>{job.team_name}</span>
+          {job && (
+            <div className="bg-white rounded-xl overflow-hidden shadow-md">
+              {/* Hero Image */}
+              <div className="relative h-64 md:h-80 bg-gradient-to-r from-racing-blue to-racing-blue/70">
+                <div className="absolute inset-0 flex items-center justify-center text-white">
+                  <div className="text-center">
+                    <h1 className="text-4xl font-display font-bold mb-2">{job.title}</h1>
+                    <p className="text-xl">{job.team_name}</p>
                   </div>
                 </div>
-                <div className="mt-4 md:mt-0">
-                  <p className="text-2xl font-semibold text-racing-blue">
-                    ${job.pay_rate.toLocaleString()}
-                    {job.is_full_time ? "/yr" : 
-                      job.payment_term === "per-day" ? "/day" : 
-                      job.payment_term === "per-weekend" ? "/weekend" : 
-                      "/event"}
-                  </p>
+                <div className="absolute top-4 right-4 flex space-x-2">
+                  <Badge className="bg-racing-blue text-white">{job.status}</Badge>
+                  <Badge variant="outline" className="bg-blue-50 text-blue-800">
+                    {job.is_full_time ? "Full-time" : "Contract"}
+                  </Badge>
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  <span>{job.location}</span>
-                </div>
-                <div className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span>
-                    {formatDate(job.date_start)}
-                    {job.date_end ? ` - ${formatDate(job.date_end)}` : ' (Ongoing)'}
-                  </span>
-                </div>
-              </div>
-              
-              <Separator className="my-8" />
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-8">
-                <div className="md:col-span-2">
-                  <h2 className="text-xl font-display font-semibold mb-4">Job Description</h2>
-                  <p className="text-gray-700 mb-6">{job.description}</p>
-                  
-                  {job.responsibilities && (
-                    <>
-                      <h3 className="text-lg font-semibold mb-3">Responsibilities</h3>
-                      <div className="bg-gray-50 p-4 rounded-md mb-6">
-                        <pre className="whitespace-pre-wrap text-gray-700 font-sans text-sm">{job.responsibilities}</pre>
-                      </div>
-                    </>
-                  )}
-                  
-                  {job.requirements && (
-                    <>
-                      <h3 className="text-lg font-semibold mb-3">Requirements</h3>
-                      <div className="bg-gray-50 p-4 rounded-md">
-                        <pre className="whitespace-pre-wrap text-gray-700 font-sans text-sm">{job.requirements}</pre>
-                      </div>
-                    </>
-                  )}
-                </div>
-                
-                <div>
-                  <div className="bg-gray-50 p-6 rounded-xl">
-                    <h3 className="text-lg font-semibold mb-4">About the Team</h3>
-                    <div className="flex items-center mb-4">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full mr-3 flex-shrink-0">
+              {/* Content */}
+              <div className="p-6 md:p-8">
+                <div className="md:flex md:items-start md:justify-between mb-6">
+                  <div>
+                    <h1 className="text-3xl font-display font-bold mb-2">{job.title}</h1>
+                    <div className="flex items-center text-gray-700">
+                      <div className="w-6 h-6 bg-gray-200 rounded-full mr-2 flex-shrink-0 overflow-hidden">
                         {job.team_logo ? (
-                          <img src={job.team_logo} alt={job.team_name} className="w-full h-full object-cover rounded-full" />
+                          <img src={job.team_logo} alt={job.team_name} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-racing-blue rounded-full text-white font-semibold">
+                          <div className="w-full h-full flex items-center justify-center bg-racing-blue text-white">
                             {job.team_name.charAt(0)}
                           </div>
                         )}
                       </div>
-                      <div>
-                        <h4 className="font-medium">{job.team_name}</h4>
-                        <p className="text-sm text-gray-500">Professional Race Team</p>
-                      </div>
+                      <span>{job.team_name}</span>
                     </div>
-                    <p className="text-sm text-gray-700">{job.team_description}</p>
+                  </div>
+                  <div className="mt-4 md:mt-0">
+                    <p className="text-2xl font-semibold text-racing-blue">
+                      ${job.pay_rate.toLocaleString()}
+                      {job.is_full_time ? "/yr" : 
+                        job.payment_term === "per-day" ? "/day" : 
+                        job.payment_term === "per-weekend" ? "/weekend" : 
+                        "/event"}
+                    </p>
                   </div>
                 </div>
-              </div>
-              
-              <Separator className="my-8" />
-              
-              <div className="bg-racing-navy/5 p-6 rounded-xl">
-                <h2 className="text-xl font-display font-semibold mb-4">Apply for this Position</h2>
                 
-                {hasApplied ? (
-                  <div className="text-center py-6">
-                    <div className="bg-green-50 text-green-700 p-4 rounded-md mb-4">
-                      <h3 className="font-semibold mb-1">You have already applied for this position</h3>
-                      <p>The team will contact you if they're interested in your application.</p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      onClick={() => navigate('/dashboard/engineer')}
-                    >
-                      View Your Applications
-                    </Button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    <span>{job.location}</span>
                   </div>
-                ) : !user ? (
-                  <div className="text-center py-6">
-                    <p className="mb-4 text-gray-600">You must be logged in to apply for this position</p>
-                    <Button
-                      onClick={() => navigate('/login', { state: { from: `/jobs/${id}` } })}
-                      className="bg-racing-blue hover:bg-racing-blue/90"
-                    >
-                      Sign In to Apply
-                    </Button>
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    <span>
+                      {formatDate(job.date_start)}
+                      {job.date_end ? ` - ${formatDate(job.date_end)}` : ' (Ongoing)'}
+                    </span>
                   </div>
-                ) : userType !== 'engineer' ? (
-                  <div className="bg-amber-50 text-amber-700 p-4 rounded-md">
-                    <h3 className="font-semibold mb-1">Only engineering accounts can apply for jobs</h3>
-                    <p>If you're an engineer, please create an engineer account to apply.</p>
-                  </div>
-                ) : (
-                  <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
-                      <label htmlFor="message" className="block mb-2 text-sm font-medium">
-                        Cover Letter
-                      </label>
-                      <Textarea
-                        id="message"
-                        placeholder="Introduce yourself and explain why you're interested in this position. Include relevant experience and qualifications."
-                        rows={5}
-                        value={message}
-                        onChange={(e) => setMessage(e.target.value)}
-                        required
-                        className="w-full"
-                      />
-                    </div>
+                </div>
+                
+                <Separator className="my-8" />
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 mb-8">
+                  <div className="md:col-span-2">
+                    <h2 className="text-xl font-display font-semibold mb-4">Job Description</h2>
+                    <p className="text-gray-700 mb-6">{job.description}</p>
                     
-                    <div className="flex justify-end">
+                    {jobSkillsText && (
+                      <>
+                        <h3 className="text-lg font-semibold mb-3">Requirements</h3>
+                        <div className="bg-gray-50 p-4 rounded-md">
+                          <pre className="whitespace-pre-wrap text-gray-700 font-sans text-sm">{jobSkillsText}</pre>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <div className="bg-gray-50 p-6 rounded-xl">
+                      <h3 className="text-lg font-semibold mb-4">About the Team</h3>
+                      <div className="flex items-center mb-4">
+                        <div className="w-12 h-12 bg-gray-200 rounded-full mr-3 flex-shrink-0">
+                          {job.team_logo ? (
+                            <img src={job.team_logo} alt={job.team_name} className="w-full h-full object-cover rounded-full" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-racing-blue rounded-full text-white font-semibold">
+                              {job.team_name.charAt(0)}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="font-medium">{job.team_name}</h4>
+                          <p className="text-sm text-gray-500">Professional Race Team</p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-700">{job.team_description}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                <Separator className="my-8" />
+                
+                <div className="bg-racing-navy/5 p-6 rounded-xl">
+                  <h2 className="text-xl font-display font-semibold mb-4">Apply for this Position</h2>
+                  
+                  {hasApplied ? (
+                    <div className="text-center py-6">
+                      <div className="bg-green-50 text-green-700 p-4 rounded-md mb-4">
+                        <h3 className="font-semibold mb-1">You have already applied for this position</h3>
+                        <p>The team will contact you if they're interested in your application.</p>
+                      </div>
                       <Button
-                        type="submit"
-                        className="bg-racing-blue hover:bg-racing-blue/90"
-                        disabled={isSubmitting}
+                        variant="outline"
+                        onClick={() => navigate('/dashboard/engineer')}
                       >
-                        {isSubmitting ? "Submitting..." : "Submit Application"}
+                        View Your Applications
                       </Button>
                     </div>
-                  </form>
-                )}
+                  ) : !user ? (
+                    <div className="text-center py-6">
+                      <p className="mb-4 text-gray-600">You must be logged in to apply for this position</p>
+                      <Button
+                        onClick={() => navigate('/login', { state: { from: `/jobs/${id}` } })}
+                        className="bg-racing-blue hover:bg-racing-blue/90"
+                      >
+                        Sign In to Apply
+                      </Button>
+                    </div>
+                  ) : userType !== 'engineer' ? (
+                    <div className="bg-amber-50 text-amber-700 p-4 rounded-md">
+                      <h3 className="font-semibold mb-1">Only engineering accounts can apply for jobs</h3>
+                      <p>If you're an engineer, please create an engineer account to apply.</p>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSubmit}>
+                      <div className="mb-4">
+                        <label htmlFor="message" className="block mb-2 text-sm font-medium">
+                          Cover Letter
+                        </label>
+                        <Textarea
+                          id="message"
+                          placeholder="Introduce yourself and explain why you're interested in this position. Include relevant experience and qualifications."
+                          rows={5}
+                          value={message}
+                          onChange={(e) => setMessage(e.target.value)}
+                          required
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div className="flex justify-end">
+                        <Button
+                          type="submit"
+                          className="bg-racing-blue hover:bg-racing-blue/90"
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? "Submitting..." : "Submit Application"}
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
       <Footer />

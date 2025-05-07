@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import JobCard from "@/components/JobCard";
 import Navbar from "@/components/Navbar";
@@ -16,19 +16,19 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 
-interface Job {
+type JobData = {
   id: string;
   title: string;
-  team_name?: string;
-  team_logo?: string;
   location: string;
   date_start: string;
   date_end?: string;
   pay_rate: number;
   payment_term: string;
-  is_full_time: boolean;
   status: "open" | "pending" | "filled";
-}
+  team_id: string;
+  team_name?: string;
+  team_logo?: string;
+};
 
 const Jobs = () => {
   const navigate = useNavigate();
@@ -43,8 +43,8 @@ const Jobs = () => {
   const { data: jobs = [], isLoading } = useQuery({
     queryKey: ['jobs'],
     queryFn: async () => {
-      // Join jobs with team profiles to get team info
-      const { data, error } = await supabase
+      // First fetch jobs 
+      const { data: jobsData, error: jobsError } = await supabase
         .from('jobs')
         .select(`
           id,
@@ -55,60 +55,69 @@ const Jobs = () => {
           pay_rate,
           payment_term,
           status,
-          team_id,
-          profiles:team_id(full_name, avatar_url)
+          team_id
         `)
         .eq('status', 'open');
         
-      if (error) {
-        console.error('Error fetching jobs:', error);
+      if (jobsError) {
+        console.error('Error fetching jobs:', jobsError);
         return [];
       }
       
-      // Transform the data to match the Job interface
-      return data.map((job: any) => ({
-        id: job.id,
-        roleTitle: job.title,
-        teamName: job.profiles?.full_name || 'Unknown Team',
-        teamLogo: job.profiles?.avatar_url,
-        location: job.location,
-        startDate: job.date_start,
-        endDate: job.date_end || job.date_start, 
-        payRate: job.pay_rate,
-        paymentTerm: job.payment_term,
-        isFullTime: job.payment_term === 'annual',
-        status: job.status
-      }));
+      if (!jobsData || jobsData.length === 0) {
+        return [];
+      }
+      
+      // Process the jobs data with team information
+      const processedJobs: JobData[] = [];
+      
+      for (const job of jobsData) {
+        // Get team profile for each job
+        const { data: teamData } = await supabase
+          .from('profiles')
+          .select('full_name, avatar_url')
+          .eq('id', job.team_id)
+          .single();
+        
+        processedJobs.push({
+          ...job,
+          team_name: teamData?.full_name || 'Unknown Team',
+          team_logo: teamData?.avatar_url
+        });
+      }
+      
+      return processedJobs;
     },
     refetchOnWindowFocus: false
   });
 
   // Filter jobs based on search query and filters
-  const filteredJobs = jobs.filter((job: any) => {
+  const filteredJobs = jobs.filter((job) => {
     const matchesSearch = searchQuery === "" 
-      || job.roleTitle?.toLowerCase().includes(searchQuery.toLowerCase())
-      || job.teamName?.toLowerCase().includes(searchQuery.toLowerCase())
+      || job.title?.toLowerCase().includes(searchQuery.toLowerCase())
+      || job.team_name?.toLowerCase().includes(searchQuery.toLowerCase())
       || job.location?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesRole = roleFilter === null || (job.roleTitle && job.roleTitle.includes(roleFilter));
+    const matchesRole = roleFilter === null || (job.title && job.title.includes(roleFilter));
     const matchesLocation = locationFilter === null || (job.location && job.location.includes(locationFilter));
+    const isFullTime = job.payment_term === 'annual';
     const matchesEmploymentType = 
       (!showFullTimeOnly && !showContractOnly) || 
-      (showFullTimeOnly && job.isFullTime) || 
-      (showContractOnly && !job.isFullTime);
+      (showFullTimeOnly && isFullTime) || 
+      (showContractOnly && !isFullTime);
 
     return matchesSearch && matchesRole && matchesLocation && matchesEmploymentType;
   });
 
   // Derive roles and locations from actual data
   const roles = [...new Set(jobs
-    .filter((job: any) => job.roleTitle)
-    .map((job: any) => job.roleTitle.split(' ')[0])
+    .filter((job) => job.title)
+    .map((job) => job.title.split(' ')[0])
   )];
 
   const locations = [...new Set(jobs
-    .filter((job: any) => job.location)
-    .map((job: any) => {
+    .filter((job) => job.location)
+    .map((job) => {
       const parts = job.location.split(',');
       return parts.length > 1 ? parts[1].trim() : parts[0].trim();
     })
@@ -250,8 +259,18 @@ const Jobs = () => {
               {filteredJobs.length > 0 ? (
                 filteredJobs.map((job) => (
                   <JobCard 
-                    key={job.id} 
-                    {...job} 
+                    key={job.id}
+                    id={job.id}
+                    roleTitle={job.title}
+                    teamName={job.team_name || 'Unknown Team'}
+                    teamLogo={job.team_logo}
+                    location={job.location}
+                    startDate={job.date_start}
+                    endDate={job.date_end || job.date_start}
+                    payRate={job.pay_rate}
+                    paymentTerm={job.payment_term as any}
+                    isFullTime={job.payment_term === 'annual'}
+                    status={job.status}
                     onApply={() => handleApplyJob(job.id)}
                     requiresAuth={true}
                   />
