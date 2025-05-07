@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,10 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
-  const { signIn } = useAuth();
+  const location = useLocation();
+  const { signIn, userType } = useAuth();
+  
+  const from = location.state?.from || "/";
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -30,29 +33,27 @@ const Login = () => {
       
       if (error) {
         toast.error(error.message || "Failed to sign in");
+        setIsLoading(false);
         return;
       }
       
       toast.success("Signed in successfully!");
       
-      // Get user profile to determine where to redirect
-      const { userType } = useAuth();
-      
-      // Redirect based on user type
-      if (userType === 'team') {
+      // Redirect to the page user was trying to access, or based on user type
+      if (from !== "/") {
+        navigate(from);
+      } else if (userType === 'team') {
         navigate('/dashboard/team');
       } else if (userType === 'driver') {
         navigate('/dashboard/driver');
       } else if (userType === 'engineer') {
         navigate('/dashboard/engineer');
       } else {
-        // Default fallback
         navigate('/');
       }
       
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
-    } finally {
       setIsLoading(false);
     }
   };

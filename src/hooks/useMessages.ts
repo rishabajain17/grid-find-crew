@@ -28,6 +28,8 @@ export const useMessages = () => {
       if (error) throw error;
       return { ...user, profile };
     },
+    retry: false,
+    refetchOnWindowFocus: false,
   });
 
   // Fetch conversations
@@ -35,7 +37,7 @@ export const useMessages = () => {
     if (!currentUser) return [];
     
     try {
-      // Get all messages where the team is either sender or recipient
+      // Get all messages where the user is either sender or recipient
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
         .select(`
@@ -51,7 +53,7 @@ export const useMessages = () => {
         
       if (messagesError) throw messagesError;
       
-      // Extract unique user IDs the team has messaged with
+      // Extract unique user IDs the user has messaged with
       const uniqueUserIds = new Set<string>();
       messagesData.forEach(msg => {
         if (msg.sender_id === currentUser.id) {
@@ -90,11 +92,11 @@ export const useMessages = () => {
           msg.sender_id === userId && !msg.read
         ).length;
         
-        if (profile.user_type === 'driver' || profile.user_type === 'engineer') {
+        if (profile.user_type === 'driver' || profile.user_type === 'engineer' || profile.user_type === 'team') {
           conversationsMap.set(userId, {
             id: userId,
             recipientId: userId,
-            recipientName: profile.full_name || profile.username || 'Unknown User',
+            recipientName: profile.full_name || 'Unknown User',
             recipientAvatar: profile.avatar_url || undefined,
             recipientType: profile.user_type as UserType,
             lastMessage: lastMessage?.content || '',
@@ -103,7 +105,7 @@ export const useMessages = () => {
             messages: conversationMessages.map(msg => ({
               id: msg.id,
               senderId: msg.sender_id,
-              senderName: msg.sender_id === currentUser.id ? 'You' : (profile.full_name || profile.username || 'Unknown User'),
+              senderName: msg.sender_id === currentUser.id ? 'You' : (profile.full_name || 'Unknown User'),
               content: msg.content,
               timestamp: msg.created_at,
               isRead: msg.read
@@ -221,7 +223,7 @@ export const useMessages = () => {
       }
     }
     setLoading(isLoading);
-  }, [fetchedConversations, isLoading]);
+  }, [fetchedConversations, isLoading, selectedConversation]);
 
   return {
     conversations,

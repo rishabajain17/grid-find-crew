@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/context/AuthContext";
 
 interface Job {
   id: string;
@@ -36,31 +37,7 @@ const Jobs = () => {
   const [locationFilter, setLocationFilter] = useState<string | null>(null);
   const [showFullTimeOnly, setShowFullTimeOnly] = useState(false);
   const [showContractOnly, setShowContractOnly] = useState(false);
-  const [user, setUser] = useState<any>(null);
-  const [userType, setUserType] = useState<string | null>(null);
-
-  // Check authentication status
-  useEffect(() => {
-    const checkUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data.user) {
-        setUser(data.user);
-        
-        // Get user type
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('user_type')
-          .eq('id', data.user.id)
-          .single();
-          
-        if (profile) {
-          setUserType(profile.user_type);
-        }
-      }
-    };
-    
-    checkUser();
-  }, []);
+  const { user, userType } = useAuth();
 
   // Fetch jobs from Supabase
   const { data: jobs = [], isLoading } = useQuery({
@@ -84,7 +61,6 @@ const Jobs = () => {
         .eq('status', 'open');
         
       if (error) {
-        toast.error('Failed to load jobs');
         console.error('Error fetching jobs:', error);
         return [];
       }
@@ -97,23 +73,25 @@ const Jobs = () => {
         teamLogo: job.profiles?.avatar_url,
         location: job.location,
         startDate: job.date_start,
-        endDate: job.date_end || job.date_start, // Fallback to start date if no end date
+        endDate: job.date_end || job.date_start, 
         payRate: job.pay_rate,
+        paymentTerm: job.payment_term,
         isFullTime: job.payment_term === 'annual',
         status: job.status
       }));
-    }
+    },
+    refetchOnWindowFocus: false
   });
 
   // Filter jobs based on search query and filters
   const filteredJobs = jobs.filter((job: any) => {
     const matchesSearch = searchQuery === "" 
-      || job.roleTitle.toLowerCase().includes(searchQuery.toLowerCase())
-      || job.teamName.toLowerCase().includes(searchQuery.toLowerCase())
-      || job.location.toLowerCase().includes(searchQuery.toLowerCase());
+      || job.roleTitle?.toLowerCase().includes(searchQuery.toLowerCase())
+      || job.teamName?.toLowerCase().includes(searchQuery.toLowerCase())
+      || job.location?.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const matchesRole = roleFilter === null || job.roleTitle.includes(roleFilter);
-    const matchesLocation = locationFilter === null || job.location.includes(locationFilter);
+    const matchesRole = roleFilter === null || (job.roleTitle && job.roleTitle.includes(roleFilter));
+    const matchesLocation = locationFilter === null || (job.location && job.location.includes(locationFilter));
     const matchesEmploymentType = 
       (!showFullTimeOnly && !showContractOnly) || 
       (showFullTimeOnly && job.isFullTime) || 
@@ -122,21 +100,24 @@ const Jobs = () => {
     return matchesSearch && matchesRole && matchesLocation && matchesEmploymentType;
   });
 
-  // Roles derived from data
-  const roles = [...new Set(jobs.map((job: any) => 
-    job.roleTitle.split(' ')[0] // Just take the first word of the role
-  ))];
+  // Derive roles and locations from actual data
+  const roles = [...new Set(jobs
+    .filter((job: any) => job.roleTitle)
+    .map((job: any) => job.roleTitle.split(' ')[0])
+  )];
 
-  // Locations derived from data
-  const locations = [...new Set(jobs.map((job: any) => {
-    const parts = job.location.split(',');
-    return parts.length > 1 ? parts[1].trim() : parts[0].trim(); // Get country or full location
-  }))];
+  const locations = [...new Set(jobs
+    .filter((job: any) => job.location)
+    .map((job: any) => {
+      const parts = job.location.split(',');
+      return parts.length > 1 ? parts[1].trim() : parts[0].trim();
+    })
+  )];
 
   const handlePostJob = () => {
     if (!user) {
       toast.error('Please sign in to post a job');
-      navigate('/login');
+      navigate('/login', { state: { from: '/post-job' } });
       return;
     }
     
@@ -148,6 +129,21 @@ const Jobs = () => {
     navigate('/post-job');
   };
 
+  const handleApplyJob = (jobId: string) => {
+    if (!user) {
+      toast.error('Please sign in to apply for this job');
+      navigate('/login', { state: { from: `/jobs/${jobId}` } });
+      return;
+    }
+    
+    if (userType !== 'engineer') {
+      toast.error('Only engineer accounts can apply for jobs');
+      return;
+    }
+    
+    navigate(`/jobs/${jobId}`);
+  };
+
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
@@ -156,24 +152,12 @@ const Jobs = () => {
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-display font-bold">Engineering Jobs</h1>
             
-            {/* Only show Post Job button for team accounts */}
-            {userType === 'team' && (
-              <Button 
-                onClick={handlePostJob}
-                className="bg-racing-blue hover:bg-racing-blue/90"
-              >
-                Post a Job
-              </Button>
-            )}
-            
-            {/* Show login prompt for non-authenticated users */}
-            {!user && (
-              <Link to="/login">
-                <Button variant="outline">
-                  Sign In to Post Jobs
-                </Button>
-              </Link>
-            )}
+            <Button 
+              onClick={handlePostJob}
+              className="bg-racing-blue hover:bg-racing-blue/90"
+            >
+              {userType === 'team' ? 'Post a Job' : 'Sign In to Post Jobs'}
+            </Button>
           </div>
 
           {/* Search and Filters */}
@@ -188,33 +172,37 @@ const Jobs = () => {
                 />
               </div>
               
-              <div>
-                <Select onValueChange={(value) => setRoleFilter(value === "all" ? null : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    {roles.map((role) => (
-                      <SelectItem key={role} value={role}>{role}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {roles.length > 0 && (
+                <div>
+                  <Select onValueChange={(value) => setRoleFilter(value === "all" ? null : value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Roles</SelectItem>
+                      {roles.map((role) => (
+                        <SelectItem key={role} value={role}>{role}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               
-              <div>
-                <Select onValueChange={(value) => setLocationFilter(value === "all" ? null : value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Locations</SelectItem>
-                    {locations.map((location) => (
-                      <SelectItem key={location} value={location}>{location}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {locations.length > 0 && (
+                <div>
+                  <Select onValueChange={(value) => setLocationFilter(value === "all" ? null : value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Locations</SelectItem>
+                      {locations.map((location) => (
+                        <SelectItem key={location} value={location}>{location}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
             
             <div className="flex flex-wrap items-center mt-4 gap-4">
@@ -259,11 +247,16 @@ const Jobs = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredJobs.map((job) => (
-                <JobCard key={job.id} {...job} />
-              ))}
-              
-              {filteredJobs.length === 0 && (
+              {filteredJobs.length > 0 ? (
+                filteredJobs.map((job) => (
+                  <JobCard 
+                    key={job.id} 
+                    {...job} 
+                    onApply={() => handleApplyJob(job.id)}
+                    requiresAuth={true}
+                  />
+                ))
+              ) : (
                 <div className="col-span-full text-center py-16">
                   <h3 className="text-xl font-semibold mb-2">No jobs match your filters</h3>
                   <p className="text-gray-500 mb-4">Try adjusting your search criteria</p>

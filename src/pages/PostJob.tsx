@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,12 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/context/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 
 const PostJob = () => {
   const navigate = useNavigate();
+  const { user, userType } = useAuth();
   const [formData, setFormData] = useState({
     roleTitle: "",
     description: "",
@@ -25,6 +28,20 @@ const PostJob = () => {
     paymentTerm: "annual", // "annual", "per-day", "per-weekend", "per-event"
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Redirect if not logged in or not a team
+  useEffect(() => {
+    if (!user) {
+      toast.error("You must be logged in to post a job");
+      navigate("/login", { state: { from: "/post-job" } });
+      return;
+    }
+
+    if (userType !== "team") {
+      toast.error("Only team accounts can post jobs");
+      navigate("/dashboard/team");
+    }
+  }, [user, userType, navigate]);
 
   const handleChange =
     (field: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -83,12 +100,41 @@ const PostJob = () => {
       return;
     }
 
-    // Simulate API call to create a new job
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      // Prepare skills array
+      const skills = formData.requirements
+        .split('\n')
+        .filter(item => item.trim() !== '')
+        .map(item => item.trim());
+
+      // Save to Supabase
+      const { data, error } = await supabase
+        .from('jobs')
+        .insert({
+          team_id: user?.id,
+          title: formData.roleTitle,
+          description: formData.description,
+          skills: skills,
+          location: formData.location,
+          date_start: new Date(formData.startDate).toISOString(),
+          date_end: formData.endDate ? new Date(formData.endDate).toISOString() : null,
+          pay_rate: parseFloat(formData.payRate),
+          payment_term: formData.paymentTerm,
+          status: 'open'
+        })
+        .select();
+
+      if (error) {
+        console.error("Error posting job:", error);
+        toast.error("Failed to post job: " + error.message);
+        setIsSubmitting(false);
+        return;
+      }
+
       toast.success("Job posted successfully!");
       navigate("/dashboard/team");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error posting job:", error);
       toast.error("Failed to post job. Please try again.");
       setIsSubmitting(false);
     }
