@@ -12,6 +12,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [redirectAttempted, setRedirectAttempted] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, userType, user } = useAuth();
@@ -20,22 +21,32 @@ const Login = () => {
 
   // Effect to handle redirect when user and userType become available
   useEffect(() => {
-    if (user && userType) {
-      console.log("User and userType detected, redirecting. UserType:", userType);
-      
-      if (from !== "/") {
-        navigate(from);
-      } else if (userType === 'team') {
-        navigate('/dashboard/team');
-      } else if (userType === 'driver') {
-        navigate('/dashboard/driver');
-      } else if (userType === 'engineer') {
-        navigate('/dashboard/engineer');
+    if (!user || redirectAttempted) return;
+    
+    console.log("Login: Checking redirect conditions. UserType:", userType, "User:", !!user);
+    
+    // Only try to redirect if we're not already in the process of logging in
+    if (!isLoading) {
+      if (userType) {
+        console.log("Login: Redirecting to dashboard for userType:", userType);
+        setRedirectAttempted(true);
+        
+        if (from !== "/") {
+          navigate(from);
+        } else if (userType === 'team') {
+          navigate('/dashboard/team');
+        } else if (userType === 'driver') {
+          navigate('/dashboard/driver');
+        } else if (userType === 'engineer') {
+          navigate('/dashboard/engineer');
+        } else {
+          navigate('/');
+        }
       } else {
-        navigate('/');
+        console.log("Login: User logged in but userType not available yet");
       }
     }
-  }, [user, userType, navigate, from]);
+  }, [user, userType, navigate, from, isLoading, redirectAttempted]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -46,8 +57,10 @@ const Login = () => {
     }
     
     setIsLoading(true);
+    setRedirectAttempted(false);
     
     try {
+      console.log("Login: Attempting login with email:", email);
       const { error } = await signIn(email, password);
       
       if (error) {
@@ -57,7 +70,11 @@ const Login = () => {
       }
       
       toast.success("Signed in successfully!");
-      // Redirection is now handled by the useEffect
+      // Wait a bit for the profile to be fetched
+      setTimeout(() => {
+        setIsLoading(false);
+        // Redirection is now handled by the useEffect
+      }, 500);
       
     } catch (error: any) {
       toast.error(error.message || "An error occurred");

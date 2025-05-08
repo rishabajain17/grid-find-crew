@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -41,10 +40,12 @@ const Register = () => {
     setIsLoading(true);
     
     try {
+      console.log("Register: Attempting signup with email:", email, "userType:", userType);
       const { error } = await signUp(email, password, userType, fullName);
       
       if (error) {
         toast.error(error.message || "Failed to create account");
+        setIsLoading(false);
         return;
       }
       
@@ -52,7 +53,6 @@ const Register = () => {
       navigate("/login");
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
-    } finally {
       setIsLoading(false);
     }
   };

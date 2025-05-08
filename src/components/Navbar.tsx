@@ -1,6 +1,6 @@
 
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, LogOut, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -9,14 +9,24 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { user, signOut, userType } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [hasEffectRun, setHasEffectRun] = useState(false);
+
+  // Debug effect to track auth state
+  useEffect(() => {
+    console.log("Navbar: Auth state updated - User:", !!user, "UserType:", userType);
+    setHasEffectRun(true);
+  }, [user, userType]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
+    setMobileMenuOpen(false);
   };
 
   // Determine dashboard URL based on user type
   const getDashboardUrl = () => {
+    console.log("Navbar: Getting dashboard URL for userType:", userType);
     switch (userType) {
       case 'team':
         return '/dashboard/team';
@@ -146,10 +156,7 @@ const Navbar = () => {
                 </Link>
                 <button
                   className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-700 hover:bg-gray-50"
-                  onClick={() => {
-                    setMobileMenuOpen(false);
-                    handleSignOut();
-                  }}
+                  onClick={handleSignOut}
                 >
                   Sign Out
                 </button>
