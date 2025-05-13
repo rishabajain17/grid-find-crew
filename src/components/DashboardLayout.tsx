@@ -29,7 +29,7 @@ const SidebarLink = ({ to, children, isActive }: SidebarLinkProps) => {
 interface DashboardLayoutProps {
   children: ReactNode;
   title: string;
-  userType: "team" | "driver" | "engineer";
+  userType: "team" | "driver" | "engineer" | "management";
 }
 
 const DashboardLayout = ({ children, title, userType }: DashboardLayoutProps) => {
@@ -145,6 +145,35 @@ const DashboardLayout = ({ children, title, userType }: DashboardLayoutProps) =>
             <SidebarLink
               to="/dashboard/engineer/messages"
               isActive={isActive("/dashboard/engineer/messages")}
+            >
+              Messages
+            </SidebarLink>
+          </>
+        );
+      case "management":
+        return (
+          <>
+            <SidebarLink
+              to="/dashboard/management"
+              isActive={isActive("/dashboard/management")}
+            >
+              Dashboard
+            </SidebarLink>
+            <SidebarLink
+              to="/post-management-service"
+              isActive={isActive("/post-management-service")}
+            >
+              Post Service
+            </SidebarLink>
+            <SidebarLink
+              to="/dashboard/management/services"
+              isActive={isActive("/dashboard/management/services")}
+            >
+              My Services
+            </SidebarLink>
+            <SidebarLink
+              to="/dashboard/management/messages"
+              isActive={isActive("/dashboard/management/messages")}
             >
               Messages
             </SidebarLink>
