@@ -41,7 +41,7 @@ const Register = () => {
     setIsLoading(true);
     
     try {
-      console.log("Register: Attempting signup with email:", email, "userType:", userType);
+      console.log("Register: Attempting signup with email:", email, "userType:", userType, "fullName:", fullName);
       const { error } = await signUp(email, password, userType, fullName);
       
       if (error) {
@@ -50,7 +50,7 @@ const Register = () => {
         return;
       }
       
-      toast.success("Account created! Please verify your email before signing in.");
+      toast.success("Account created! You can now sign in.");
       navigate("/login");
     } catch (error: any) {
       toast.error(error.message || "An error occurred");

@@ -12,43 +12,37 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [redirectAttempted, setRedirectAttempted] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { signIn, userType, user } = useAuth();
   
   const from = location.state?.from || "/";
 
-  // Effect to handle redirect when user and userType become available
+  // Effect to handle redirect when authenticated
   useEffect(() => {
-    if (!user || redirectAttempted) return;
+    if (!user) return;
     
-    console.log("Login: Checking redirect conditions. UserType:", userType, "User:", !!user);
+    console.log("Login: User authenticated, checking userType:", userType);
     
-    // Only try to redirect if we're not already in the process of logging in
-    if (!isLoading) {
-      if (userType) {
-        console.log("Login: Redirecting to dashboard for userType:", userType);
-        setRedirectAttempted(true);
-        
-        if (from !== "/") {
-          navigate(from);
-        } else if (userType === 'team') {
-          navigate('/dashboard/team');
-        } else if (userType === 'driver') {
-          navigate('/dashboard/driver');
-        } else if (userType === 'engineer') {
-          navigate('/dashboard/engineer');
-        } else if (userType === 'management') {
-          navigate('/dashboard/management');
-        } else {
-          navigate('/');
-        }
+    // Only redirect if user is authenticated and userType is available
+    if (userType) {
+      console.log("Login: Redirecting to dashboard for userType:", userType);
+      
+      if (from !== "/") {
+        navigate(from, { replace: true });
+      } else if (userType === 'team') {
+        navigate('/dashboard/team', { replace: true });
+      } else if (userType === 'driver') {
+        navigate('/dashboard/driver', { replace: true });
+      } else if (userType === 'engineer') {
+        navigate('/dashboard/engineer', { replace: true });
+      } else if (userType === 'management') {
+        navigate('/dashboard/management', { replace: true });
       } else {
-        console.log("Login: User logged in but userType not available yet");
+        navigate('/', { replace: true });
       }
     }
-  }, [user, userType, navigate, from, isLoading, redirectAttempted]);
+  }, [user, userType, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -59,7 +53,6 @@ const Login = () => {
     }
     
     setIsLoading(true);
-    setRedirectAttempted(false);
     
     try {
       console.log("Login: Attempting login with email:", email);
@@ -72,11 +65,7 @@ const Login = () => {
       }
       
       toast.success("Signed in successfully!");
-      // Wait a bit for the profile to be fetched
-      setTimeout(() => {
-        setIsLoading(false);
-        // Redirection is now handled by the useEffect
-      }, 500);
+      // Redirection is now handled by the useEffect
       
     } catch (error: any) {
       toast.error(error.message || "An error occurred");

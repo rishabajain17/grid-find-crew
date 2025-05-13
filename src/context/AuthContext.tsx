@@ -71,6 +71,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
+    // Set up auth state listener FIRST to prevent auth deadlocks
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
+        
+        if (session && session.user) {
+          setUser({
+            id: session.user.id,
+            email: session.user.email || '',
+          });
+
+          // Use setTimeout to avoid potential auth deadlocks
+          setTimeout(async () => {
+            // Fetch profile on auth change
+            await fetchProfile(session.user.id);
+          }, 0);
+        } else {
+          setUser(null);
+          setProfile(null);
+          setUserType(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    // THEN check for existing session
     const fetchUser = async () => {
       setIsLoading(true);
       try {
@@ -102,31 +128,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
 
     fetchUser();
-
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
-        if (session && session.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-          });
-
-          // Use setTimeout to avoid potential auth deadlocks
-          setTimeout(async () => {
-            // Fetch profile on auth change
-            await fetchProfile(session.user.id);
-          }, 0);
-        } else {
-          setUser(null);
-          setProfile(null);
-          setUserType(null);
-        }
-        setIsLoading(false);
-      }
-    );
 
     return () => {
       subscription.unsubscribe();
