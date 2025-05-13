@@ -1,4 +1,3 @@
-
 import { ReactNode, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -29,10 +28,11 @@ const SidebarLink = ({ to, children, isActive }: SidebarLinkProps) => {
 interface DashboardLayoutProps {
   children: ReactNode;
   title: string;
+  subtitle?: string; // Make subtitle optional
   userType: "team" | "driver" | "engineer" | "management";
 }
 
-const DashboardLayout = ({ children, title, userType }: DashboardLayoutProps) => {
+const DashboardLayout = ({ children, title, subtitle, userType }: DashboardLayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
@@ -292,7 +292,12 @@ const DashboardLayout = ({ children, title, userType }: DashboardLayoutProps) =>
       <div className="flex-1 flex flex-col bg-gray-50">
         <header className="bg-white shadow-sm">
           <div className="px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-            <h1 className="text-xl font-display font-semibold text-gray-900">{title}</h1>
+            <div>
+              <h1 className="text-xl font-display font-semibold text-gray-900">{title}</h1>
+              {subtitle && (
+                <p className="mt-1 text-sm text-gray-500">{subtitle}</p>
+              )}
+            </div>
             <div className="flex items-center space-x-4">
               <button className="text-gray-500 hover:text-gray-700">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
