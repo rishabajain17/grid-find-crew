@@ -14,35 +14,35 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, userType, user } = useAuth();
+  const { signIn, user, userType, isLoading: authLoading } = useAuth();
   
   const from = location.state?.from || "/";
 
   // Effect to handle redirect when authenticated
   useEffect(() => {
+    if (authLoading) return; // Don't redirect while still loading auth state
+    
     if (!user) return;
     
-    console.log("Login: User authenticated, checking userType:", userType);
+    console.log("Login: User authenticated, redirecting with userType:", userType);
     
-    // Only redirect if user is authenticated and userType is available
-    if (userType) {
-      console.log("Login: Redirecting to dashboard for userType:", userType);
-      
-      if (from !== "/") {
-        navigate(from, { replace: true });
-      } else if (userType === 'team') {
-        navigate('/dashboard/team', { replace: true });
-      } else if (userType === 'driver') {
-        navigate('/dashboard/driver', { replace: true });
-      } else if (userType === 'engineer') {
-        navigate('/dashboard/engineer', { replace: true });
-      } else if (userType === 'management') {
-        navigate('/dashboard/management', { replace: true });
-      } else {
-        navigate('/', { replace: true });
-      }
+    // Only redirect if user is authenticated
+    if (from !== "/") {
+      navigate(from, { replace: true });
+    } else if (userType === 'team') {
+      navigate('/dashboard/team', { replace: true });
+    } else if (userType === 'driver') {
+      navigate('/dashboard/driver', { replace: true });
+    } else if (userType === 'engineer') {
+      navigate('/dashboard/engineer', { replace: true });
+    } else if (userType === 'management') {
+      navigate('/dashboard/management', { replace: true });
+    } else {
+      // Fallback if userType is not yet available but user is authenticated
+      console.log("Login: No specific userType available yet, redirecting to homepage");
+      navigate('/', { replace: true });
     }
-  }, [user, userType, navigate, from]);
+  }, [user, userType, navigate, from, authLoading]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -72,6 +72,21 @@ const Login = () => {
       setIsLoading(false);
     }
   };
+
+  // If already logged in and userType is available, redirect immediately
+  if (!authLoading && user && userType) {
+    console.log("Login: Already logged in with userType:", userType);
+    if (userType === 'team') {
+      navigate('/dashboard/team', { replace: true });
+    } else if (userType === 'driver') {
+      navigate('/dashboard/driver', { replace: true });
+    } else if (userType === 'engineer') {
+      navigate('/dashboard/engineer', { replace: true });
+    } else if (userType === 'management') {
+      navigate('/dashboard/management', { replace: true });
+    }
+    return null; // Don't render the login form if already logged in
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
@@ -120,7 +135,7 @@ const Login = () => {
               <Button 
                 type="submit" 
                 className="w-full bg-racing-blue hover:bg-racing-blue/90"
-                disabled={isLoading}
+                disabled={isLoading || authLoading}
               >
                 {isLoading ? "Signing in..." : "Sign In"}
               </Button>

@@ -40,9 +40,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Fetching profile for user:', userId);
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, avatar_url, user_type')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle instead of single to avoid errors
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
@@ -55,13 +55,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           id: profileData.id,
           full_name: profileData.full_name,
           avatar_url: profileData.avatar_url,
-          user_type: profileData.user_type,
+          user_type: profileData.user_type as UserType | null,
         };
         
         setProfile(userProfile);
-        setUserType(profileData.user_type);
+        setUserType(profileData.user_type as UserType | null);
+        console.log('Updated userType state to:', profileData.user_type);
         return userProfile;
       }
+      
       console.log('No profile found for user:', userId);
       return null;
     } catch (error) {
@@ -86,13 +88,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           setTimeout(async () => {
             // Fetch profile on auth change
             await fetchProfile(session.user.id);
+            setIsLoading(false);
           }, 0);
         } else {
           setUser(null);
           setProfile(null);
           setUserType(null);
+          setIsLoading(false);
         }
-        setIsLoading(false);
       }
     );
 
@@ -120,9 +123,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
         // Get profile data
         await fetchProfile(user.id);
+        setIsLoading(false);
       } catch (error) {
         console.error('Auth error:', error);
-      } finally {
         setIsLoading(false);
       }
     };
@@ -178,25 +181,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
 
-      console.log('Sign up successful, creating profile');
-      
-      // Create the user profile immediately after signup
-      if (data.user) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            id: data.user.id,
-            full_name: fullName,
-            user_type: userType
-          });
-          
-        if (profileError) {
-          console.error('Error creating profile:', profileError);
-        } else {
-          console.log('Profile created successfully');
-        }
-      }
-      
+      console.log('Sign up successful');
       return { error: null };
     } catch (error) {
       console.error('Sign up exception:', error);
