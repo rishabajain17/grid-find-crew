@@ -20,12 +20,16 @@ import DriverMessages from "./pages/dashboard/DriverMessages";
 import EngineerApplications from "./pages/dashboard/EngineerApplications";
 import EngineerSaved from "./pages/dashboard/EngineerSaved";
 import EngineerMessages from "./pages/dashboard/EngineerMessages";
+import ManagementDashboard from "./pages/dashboard/ManagementDashboard"; // This will be created next
+import ManagementServices from "./pages/dashboard/ManagementServices"; // This will be created next
+import ManagementMessages from "./pages/dashboard/ManagementMessages"; // This will be created next
 import Seats from "./pages/Seats";
 import Jobs from "./pages/Jobs";
 import SeatDetail from "./pages/SeatDetail";
 import JobDetail from "./pages/JobDetail";
 import PostSeat from "./pages/PostSeat";
 import PostJob from "./pages/PostJob";
+import PostManagementService from "./pages/PostManagementService"; // This will be created next
 import About from "./pages/About";
 import { ReactNode } from "react";
 
@@ -57,6 +61,8 @@ const ProtectedRoute = ({
       return <Navigate to="/dashboard/driver" replace />;
     } else if (userType === 'engineer') {
       return <Navigate to="/dashboard/engineer" replace />;
+    } else if (userType === 'management') {
+      return <Navigate to="/dashboard/management" replace />;
     } else {
       return <Navigate to="/" replace />;
     }
@@ -132,6 +138,23 @@ const AppRoutes = () => (
       </ProtectedRoute>
     } />
     
+    {/* Management routes */}
+    <Route path="/dashboard/management" element={
+      <ProtectedRoute allowedUserTypes={['management', 'admin']}>
+        <ManagementDashboard />
+      </ProtectedRoute>
+    } />
+    <Route path="/dashboard/management/services" element={
+      <ProtectedRoute allowedUserTypes={['management', 'admin']}>
+        <ManagementServices />
+      </ProtectedRoute>
+    } />
+    <Route path="/dashboard/management/messages" element={
+      <ProtectedRoute allowedUserTypes={['management', 'admin']}>
+        <ManagementMessages />
+      </ProtectedRoute>
+    } />
+    
     {/* Public routes */}
     <Route path="/seats" element={<Seats />} />
     <Route path="/jobs" element={<Jobs />} />
@@ -147,6 +170,11 @@ const AppRoutes = () => (
     <Route path="/post-job" element={
       <ProtectedRoute allowedUserTypes={['team', 'admin']}>
         <PostJob />
+      </ProtectedRoute>
+    } />
+    <Route path="/post-management-service" element={
+      <ProtectedRoute allowedUserTypes={['management', 'admin']}>
+        <PostManagementService />
       </ProtectedRoute>
     } />
     

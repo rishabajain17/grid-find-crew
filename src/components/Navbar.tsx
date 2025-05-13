@@ -34,6 +34,8 @@ const Navbar = () => {
         return '/dashboard/driver';
       case 'engineer':
         return '/dashboard/engineer';
+      case 'management':
+        return '/dashboard/management';
       default:
         return '/';
     }

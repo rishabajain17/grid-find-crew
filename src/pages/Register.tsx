@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -134,6 +135,11 @@ const Register = () => {
                   <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50 cursor-pointer">
                     <RadioGroupItem value="engineer" id="engineer" />
                     <Label htmlFor="engineer" className="cursor-pointer">Engineer</Label>
+                  </div>
+
+                  <div className="flex items-center space-x-2 border rounded-md p-3 hover:bg-gray-50 cursor-pointer">
+                    <RadioGroupItem value="management" id="management" />
+                    <Label htmlFor="management" className="cursor-pointer">Management</Label>
                   </div>
                 </RadioGroup>
               </div>

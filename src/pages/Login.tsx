@@ -39,6 +39,8 @@ const Login = () => {
           navigate('/dashboard/driver');
         } else if (userType === 'engineer') {
           navigate('/dashboard/engineer');
+        } else if (userType === 'management') {
+          navigate('/dashboard/management');
         } else {
           navigate('/');
         }
