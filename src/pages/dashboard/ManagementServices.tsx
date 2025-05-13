@@ -1,5 +1,4 @@
-
-import { DashboardLayout } from "@/components/DashboardLayout";
+import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 
@@ -10,11 +9,7 @@ const ManagementServices = () => {
     <DashboardLayout
       title="Management Services"
       subtitle="View and manage your offered management services"
-      navItems={[
-        { label: "Dashboard", href: "/dashboard/management" },
-        { label: "Services", href: "/dashboard/management/services" },
-        { label: "Messages", href: "/dashboard/management/messages" },
-      ]}
+      userType="management"
     >
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
