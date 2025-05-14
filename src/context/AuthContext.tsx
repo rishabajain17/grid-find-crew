@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserType } from '@/types/database.types';
+import { toast } from "sonner";
 
 interface User {
   id: string;
@@ -73,77 +74,82 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST to prevent auth deadlocks
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
-        if (session && session.user) {
-          setUser({
-            id: session.user.id,
-            email: session.user.email || '',
-          });
-
-          // Use setTimeout to avoid potential auth deadlocks
-          setTimeout(async () => {
-            // Fetch profile on auth change
-            await fetchProfile(session.user.id);
-            setIsLoading(false);
-          }, 0);
-        } else {
-          setUser(null);
-          setProfile(null);
-          setUserType(null);
-          setIsLoading(false);
-        }
-      }
-    );
-
-    // THEN check for existing session
-    const fetchUser = async () => {
+    // Initialize auth state
+    const initAuth = async () => {
       setIsLoading(true);
-      try {
-        // Get current user
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) {
-          console.log('No authenticated user found');
-          setUser(null);
-          setProfile(null);
-          setUserType(null);
-          setIsLoading(false);
-          return;
+      
+      // Set up auth state listener FIRST to prevent auth deadlocks
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          console.log('Auth state changed:', event, session?.user?.id);
+          
+          if (session && session.user) {
+            setUser({
+              id: session.user.id,
+              email: session.user.email || '',
+            });
+
+            // Use setTimeout to avoid potential auth deadlocks
+            setTimeout(async () => {
+              await fetchProfile(session.user.id);
+              setIsLoading(false);
+            }, 0);
+          } else {
+            setUser(null);
+            setProfile(null);
+            setUserType(null);
+            setIsLoading(false);
+          }
         }
+      );
 
-        console.log('User found on app initialization:', user.id);
-        
-        setUser({
-          id: user.id,
-          email: user.email || '',
-        });
-
-        // Get profile data
-        await fetchProfile(user.id);
+      // THEN check for existing session
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Auth session error:', error);
         setIsLoading(false);
-      } catch (error) {
-        console.error('Auth error:', error);
-        setIsLoading(false);
+        return;
       }
+      
+      if (!session) {
+        console.log('No authenticated user found on initialization');
+        setUser(null);
+        setProfile(null);
+        setUserType(null);
+        setIsLoading(false);
+        return;
+      }
+
+      console.log('User found on app initialization:', session.user.id);
+      
+      setUser({
+        id: session.user.id,
+        email: session.user.email || '',
+      });
+
+      // Get profile data
+      await fetchProfile(session.user.id);
+      setIsLoading(false);
+
+      return () => {
+        subscription.unsubscribe();
+      };
     };
 
-    fetchUser();
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    initAuth();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
       console.log('Attempting sign in for:', email);
+      setIsLoading(true);
       const { error, data } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
         console.error('Sign in error:', error);
+        toast.error(error.message || "Failed to sign in");
+        setIsLoading(false);
         return { error };
       }
       
@@ -155,9 +161,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('Profile after login:', profileData);
       }
       
+      setIsLoading(false);
+      toast.success("Signed in successfully!");
       return { error: null };
     } catch (error) {
       console.error('Sign in exception:', error);
+      setIsLoading(false);
+      toast.error("An unexpected error occurred");
       return { error };
     }
   };
@@ -165,6 +175,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signUp = async (email: string, password: string, userType: UserType, fullName: string) => {
     try {
       console.log('Attempting signup for:', email, 'as', userType);
+      setIsLoading(true);
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
@@ -178,34 +189,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (error) {
         console.error('Sign up error:', error);
+        toast.error(error.message || "Failed to sign up");
+        setIsLoading(false);
         return { error };
       }
 
+      // No need to fetch profile immediately as the trigger will handle it
       console.log('Sign up successful');
+      toast.success("Signed up successfully! Please check your email to confirm your account.");
+      setIsLoading(false);
       return { error: null };
     } catch (error) {
       console.error('Sign up exception:', error);
+      setIsLoading(false);
+      toast.error("An unexpected error occurred");
       return { error };
     }
   };
 
   const signOut = async () => {
     console.log('Signing out...');
+    setIsLoading(true);
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
     setUserType(null);
+    setIsLoading(false);
     console.log('Signed out successfully');
+    toast.success("Signed out successfully");
   };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
     if (!user) {
       console.error('Cannot update profile: User not authenticated');
+      toast.error("You must be signed in to update your profile");
       return { error: new Error('User not authenticated') };
     }
 
     try {
       console.log('Updating profile for:', user.id, updates);
+      setIsLoading(true);
       const { error } = await supabase
         .from('profiles')
         .update(updates)
@@ -215,13 +238,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setProfile({ ...profile, ...updates });
         if (updates.user_type) setUserType(updates.user_type);
         console.log('Profile updated successfully');
+        toast.success("Profile updated successfully");
       } else if (error) {
         console.error('Error updating profile:', error);
+        toast.error(error.message || "Failed to update profile");
       }
 
+      setIsLoading(false);
       return { error };
     } catch (error) {
       console.error('Update profile exception:', error);
+      setIsLoading(false);
+      toast.error("An unexpected error occurred");
       return { error };
     }
   };

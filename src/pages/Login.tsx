@@ -11,38 +11,38 @@ import { useAuth } from "@/context/AuthContext";
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, user, userType, isLoading: authLoading } = useAuth();
+  const { signIn, user, userType, isLoading } = useAuth();
   
   const from = location.state?.from || "/";
 
   // Effect to handle redirect when authenticated
   useEffect(() => {
-    if (authLoading) return; // Don't redirect while still loading auth state
+    if (isLoading) return; // Don't redirect while still loading auth state
     
-    if (!user) return;
+    if (!user) return; // Don't redirect if not authenticated
     
     console.log("Login: User authenticated, redirecting with userType:", userType);
     
-    // Only redirect if user is authenticated
-    if (from !== "/") {
-      navigate(from, { replace: true });
-    } else if (userType === 'team') {
-      navigate('/dashboard/team', { replace: true });
-    } else if (userType === 'driver') {
-      navigate('/dashboard/driver', { replace: true });
-    } else if (userType === 'engineer') {
-      navigate('/dashboard/engineer', { replace: true });
-    } else if (userType === 'management') {
-      navigate('/dashboard/management', { replace: true });
-    } else {
-      // Fallback if userType is not yet available but user is authenticated
-      console.log("Login: No specific userType available yet, redirecting to homepage");
-      navigate('/', { replace: true });
+    // Only redirect if user is authenticated and userType is available
+    if (userType) {
+      if (from !== "/") {
+        navigate(from, { replace: true });
+      } else if (userType === 'team') {
+        navigate('/dashboard/team', { replace: true });
+      } else if (userType === 'driver') {
+        navigate('/dashboard/driver', { replace: true });
+      } else if (userType === 'engineer') {
+        navigate('/dashboard/engineer', { replace: true });
+      } else if (userType === 'management') {
+        navigate('/dashboard/management', { replace: true });
+      } else {
+        navigate('/', { replace: true });
+      }
     }
-  }, [user, userType, navigate, from, authLoading]);
+  }, [user, userType, navigate, from, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -52,7 +52,7 @@ const Login = () => {
       return;
     }
     
-    setIsLoading(true);
+    setIsSubmitting(true);
     
     try {
       console.log("Login: Attempting login with email:", email);
@@ -60,32 +60,21 @@ const Login = () => {
       
       if (error) {
         toast.error(error.message || "Failed to sign in");
-        setIsLoading(false);
+        setIsSubmitting(false);
         return;
       }
       
-      toast.success("Signed in successfully!");
-      // Redirection is now handled by the useEffect
+      // Redirection is handled by the useEffect
       
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  // If already logged in and userType is available, redirect immediately
-  if (!authLoading && user && userType) {
-    console.log("Login: Already logged in with userType:", userType);
-    if (userType === 'team') {
-      navigate('/dashboard/team', { replace: true });
-    } else if (userType === 'driver') {
-      navigate('/dashboard/driver', { replace: true });
-    } else if (userType === 'engineer') {
-      navigate('/dashboard/engineer', { replace: true });
-    } else if (userType === 'management') {
-      navigate('/dashboard/management', { replace: true });
-    }
-    return null; // Don't render the login form if already logged in
+  // If already logged in and userType is available, show loading
+  if (!isLoading && user && userType) {
+    return <div className="flex justify-center items-center h-screen">Redirecting to dashboard...</div>;
   }
 
   return (
@@ -135,9 +124,9 @@ const Login = () => {
               <Button 
                 type="submit" 
                 className="w-full bg-racing-blue hover:bg-racing-blue/90"
-                disabled={isLoading || authLoading}
+                disabled={isSubmitting || isLoading}
               >
-                {isLoading ? "Signing in..." : "Sign In"}
+                {isSubmitting ? "Signing in..." : "Sign In"}
               </Button>
               
               <div className="text-sm text-center text-gray-600">
