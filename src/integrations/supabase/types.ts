@@ -9,6 +9,114 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      applications: {
+        Row: {
+          applicant_id: string
+          created_at: string | null
+          id: string
+          listing_id: string
+          listing_type: string
+          message: string | null
+          status: string
+        }
+        Insert: {
+          applicant_id: string
+          created_at?: string | null
+          id?: string
+          listing_id: string
+          listing_type: string
+          message?: string | null
+          status?: string
+        }
+        Update: {
+          applicant_id?: string
+          created_at?: string | null
+          id?: string
+          listing_id?: string
+          listing_type?: string
+          message?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      jobs: {
+        Row: {
+          created_at: string | null
+          date_end: string | null
+          date_start: string
+          description: string
+          id: string
+          location: string
+          media_urls: string[] | null
+          pay_rate: number
+          payment_term: string
+          skills: string[] | null
+          status: string
+          team_id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          date_end?: string | null
+          date_start: string
+          description: string
+          id?: string
+          location: string
+          media_urls?: string[] | null
+          pay_rate: number
+          payment_term: string
+          skills?: string[] | null
+          status: string
+          team_id: string
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          date_end?: string | null
+          date_start?: string
+          description?: string
+          id?: string
+          location?: string
+          media_urls?: string[] | null
+          pay_rate?: number
+          payment_term?: string
+          skills?: string[] | null
+          status?: string
+          team_id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          read: boolean
+          recipient_id: string
+          sender_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          read?: boolean
+          recipient_id: string
+          sender_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          read?: boolean
+          recipient_id?: string
+          sender_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -33,12 +141,78 @@ export type Database = {
         }
         Relationships: []
       }
+      roles: {
+        Row: {
+          created_at: string | null
+          id: number
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: number
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: number
+          name?: string
+        }
+        Relationships: []
+      }
+      seats: {
+        Row: {
+          car_type: string
+          created_at: string | null
+          date_end: string
+          date_start: string
+          event_name: string
+          id: string
+          location: string
+          media_urls: string[] | null
+          price: number
+          requirements: string | null
+          status: string
+          team_id: string
+        }
+        Insert: {
+          car_type: string
+          created_at?: string | null
+          date_end: string
+          date_start: string
+          event_name: string
+          id?: string
+          location: string
+          media_urls?: string[] | null
+          price: number
+          requirements?: string | null
+          status: string
+          team_id: string
+        }
+        Update: {
+          car_type?: string
+          created_at?: string | null
+          date_end?: string
+          date_start?: string
+          event_name?: string
+          id?: string
+          location?: string
+          media_urls?: string[] | null
+          price?: number
+          requirements?: string | null
+          status?: string
+          team_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { user_id: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

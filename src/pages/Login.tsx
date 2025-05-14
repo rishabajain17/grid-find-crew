@@ -16,30 +16,37 @@ const Login = () => {
   const location = useLocation();
   const { signIn, user, userType, isLoading } = useAuth();
   
+  // Get the page user was trying to access before being redirected to login
   const from = location.state?.from || "/";
 
   // Effect to handle redirect when authenticated
   useEffect(() => {
-    if (isLoading) return; // Don't redirect while still loading auth state
+    if (isLoading) {
+      // Don't redirect while loading
+      console.log("Login: Still loading auth state...");
+      return;
+    }
     
-    if (!user) return; // Don't redirect if not authenticated
+    if (!user) {
+      // Don't redirect if not authenticated
+      return;
+    }
     
-    console.log("Login: User authenticated, redirecting with userType:", userType);
+    console.log("Login: User authenticated, userType:", userType);
     
-    // Only redirect if user is authenticated and userType is available
+    // Only redirect when user is authenticated and userType is available
     if (userType) {
-      if (from !== "/") {
+      setIsSubmitting(false);
+      
+      if (from && from !== "/") {
+        // Redirect to the page user was trying to access
+        console.log(`Login: Redirecting to ${from}`);
         navigate(from, { replace: true });
-      } else if (userType === 'team') {
-        navigate('/dashboard/team', { replace: true });
-      } else if (userType === 'driver') {
-        navigate('/dashboard/driver', { replace: true });
-      } else if (userType === 'engineer') {
-        navigate('/dashboard/engineer', { replace: true });
-      } else if (userType === 'management') {
-        navigate('/dashboard/management', { replace: true });
       } else {
-        navigate('/', { replace: true });
+        // Redirect to appropriate dashboard based on user type
+        const dashboardPath = `/dashboard/${userType}`;
+        console.log(`Login: Redirecting to dashboard: ${dashboardPath}`);
+        navigate(dashboardPath, { replace: true });
       }
     }
   }, [user, userType, navigate, from, isLoading]);
@@ -71,11 +78,6 @@ const Login = () => {
       setIsSubmitting(false);
     }
   };
-
-  // If already logged in and userType is available, show loading
-  if (!isLoading && user && userType) {
-    return <div className="flex justify-center items-center h-screen">Redirecting to dashboard...</div>;
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">

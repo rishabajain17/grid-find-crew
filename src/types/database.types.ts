@@ -1,3 +1,4 @@
+
 export type Json =
   | string
   | number
@@ -16,19 +17,20 @@ export interface Database {
       profiles: {
         Row: {
           id: string
-          created_at: string
-          updated_at: string
-          avatar_url: string | null
-          user_type: UserType | null
-          full_name: string | null
-          bio: string | null
-          location: string | null
-          website: string | null
-          social_links: Json | null
-          experience_years: number | null
-          expertise: string[] | null
-          achievements: string[] | null
-          role_id: number | null
+          created_at?: string
+          updated_at?: string
+          avatar_url?: string | null
+          user_type?: UserType | null
+          full_name?: string | null
+          bio?: string | null
+          location?: string | null
+          website?: string | null
+          social_links?: Json | null
+          experience_years?: number | null
+          expertise?: string[] | null
+          achievements?: string[] | null
+          role_id?: number | null
+          username?: string | null
         }
         Insert: {
           id: string
@@ -45,6 +47,7 @@ export interface Database {
           expertise?: string[] | null
           achievements?: string[] | null
           role_id?: number | null
+          username?: string | null
         }
         Update: {
           id?: string
@@ -61,6 +64,7 @@ export interface Database {
           expertise?: string[] | null
           achievements?: string[] | null
           role_id?: number | null
+          username?: string | null
         }
         Relationships: [
           {
