@@ -4,19 +4,18 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, LogOut, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
+import { toast } from "sonner";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, signOut, userType } = useAuth();
+  const { user, signOut, userType, profile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [hasEffectRun, setHasEffectRun] = useState(false);
 
-  // Debug effect to track auth state
+  // Enhanced debug effect to track auth state
   useEffect(() => {
-    console.log("Navbar: Auth state updated - User:", !!user, "UserType:", userType);
-    setHasEffectRun(true);
-  }, [user, userType]);
+    console.log("Navbar: Auth state updated - User:", !!user, "UserType:", userType, "Profile:", profile);
+  }, [user, userType, profile]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -37,8 +36,24 @@ const Navbar = () => {
       case 'management':
         return '/dashboard/management';
       default:
+        console.warn("No valid user type found for dashboard redirection, using fallback");
         return '/';
     }
+  };
+
+  // Add a direct navigation handler for dashboard
+  const handleDashboardClick = (e) => {
+    e.preventDefault();
+    const url = getDashboardUrl();
+    console.log("Navigating to dashboard:", url);
+    
+    if (url === '/' && userType === null) {
+      toast.error("Could not determine your dashboard. Please try signing out and back in.");
+    } else {
+      navigate(url);
+    }
+    
+    setMobileMenuOpen(false);
   };
 
   return (
@@ -72,12 +87,14 @@ const Navbar = () => {
           <div className="hidden md:flex md:items-center md:space-x-4">
             {user ? (
               <>
-                <Link to={getDashboardUrl()}>
-                  <Button variant="ghost" className="flex items-center space-x-2">
-                    <User size={18} />
-                    <span>Dashboard</span>
-                  </Button>
-                </Link>
+                <Button 
+                  variant="ghost" 
+                  className="flex items-center space-x-2"
+                  onClick={handleDashboardClick}
+                >
+                  <User size={18} />
+                  <span>Dashboard</span>
+                </Button>
                 <Button 
                   variant="ghost" 
                   className="text-gray-700 hover:text-racing-red flex items-center space-x-2"
@@ -149,13 +166,12 @@ const Navbar = () => {
             
             {user ? (
               <>
-                <Link
-                  to={getDashboardUrl()}
-                  className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50"
-                  onClick={() => setMobileMenuOpen(false)}
+                <button
+                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50"
+                  onClick={handleDashboardClick}
                 >
                   Dashboard
-                </Link>
+                </button>
                 <button
                   className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-700 hover:bg-gray-50"
                   onClick={handleSignOut}

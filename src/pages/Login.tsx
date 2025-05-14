@@ -14,40 +14,44 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, user, userType, isLoading } = useAuth();
+  const { signIn, user, userType, profile, isLoading } = useAuth();
   
   // Get the page user was trying to access before being redirected to login
   const from = location.state?.from || "/";
 
-  // Effect to handle redirect when authenticated
   useEffect(() => {
+    console.log("Login: Auth state check - User:", !!user, "UserType:", userType, "IsLoading:", isLoading);
+    
+    // Don't redirect while loading
     if (isLoading) {
-      // Don't redirect while loading
       console.log("Login: Still loading auth state...");
       return;
     }
     
+    // Don't redirect if not authenticated
     if (!user) {
-      // Don't redirect if not authenticated
+      console.log("Login: No user authenticated yet");
       return;
     }
     
     console.log("Login: User authenticated, userType:", userType);
     
-    // Only redirect when user is authenticated and userType is available
+    // Redirect based on user type when available
     if (userType) {
       setIsSubmitting(false);
       
+      // Determine redirect path
+      let redirectPath;
       if (from && from !== "/") {
-        // Redirect to the page user was trying to access
-        console.log(`Login: Redirecting to ${from}`);
-        navigate(from, { replace: true });
+        redirectPath = from;
       } else {
-        // Redirect to appropriate dashboard based on user type
-        const dashboardPath = `/dashboard/${userType}`;
-        console.log(`Login: Redirecting to dashboard: ${dashboardPath}`);
-        navigate(dashboardPath, { replace: true });
+        redirectPath = `/dashboard/${userType}`;
       }
+      
+      console.log(`Login: Redirecting to ${redirectPath}`);
+      navigate(redirectPath, { replace: true });
+    } else {
+      console.log("Login: User authenticated but userType not available yet");
     }
   }, [user, userType, navigate, from, isLoading]);
 
@@ -70,6 +74,9 @@ const Login = () => {
         setIsSubmitting(false);
         return;
       }
+      
+      // Successful login toast
+      toast.success("Signed in successfully!");
       
       // Redirection is handled by the useEffect
       
