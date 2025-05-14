@@ -190,10 +190,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Sign in successful, user ID:', data.user?.id);
       
       if (data?.user) {
-        await fetchProfile(data.user.id);
+        // Make sure we get the profile info
+        const userProfile = await fetchProfile(data.user.id);
+        console.log('Retrieved user profile after sign in:', userProfile);
+        
+        // Update state to ensure we have both user and userType
+        setUser({
+          id: data.user.id,
+          email: data.user.email || '',
+        });
+        
+        if (userProfile) {
+          setProfile(userProfile);
+          setUserType(userProfile.user_type);
+        }
       }
       
-      toast.success("Signed in successfully!");
       setIsLoading(false);
       return { error: null };
     } catch (error) {

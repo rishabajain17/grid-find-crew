@@ -22,23 +22,22 @@ const Login = () => {
   useEffect(() => {
     console.log("Login: Auth state check - User:", !!user, "UserType:", userType, "IsLoading:", isLoading);
     
-    // Wait for loading to complete and make sure we have both user and userType
     if (isLoading) {
       console.log("Login: Still loading auth state...");
       return;
     }
     
+    // If no user is authenticated, nothing to do
     if (!user) {
       console.log("Login: No user authenticated yet");
       return;
     }
     
+    // At this point we have a user but may not have userType yet
     console.log("Login: User authenticated, userType:", userType);
     
     // Only redirect when we have both user and userType
     if (user && userType) {
-      setIsSubmitting(false);
-      
       // Determine redirect path
       let redirectPath;
       if (from && from !== "/") {
@@ -49,11 +48,7 @@ const Login = () => {
       
       console.log(`Login: Redirecting to ${redirectPath}`);
       navigate(redirectPath, { replace: true });
-      toast.success(`Welcome! You've been redirected to your ${userType} dashboard.`);
-    } else if (user && !userType) {
-      console.log("Login: User authenticated but userType not available yet");
-      // This should not happen if our profile fetching works correctly
-      toast.error("Could not determine your account type. Please contact support.");
+      toast.success(`Welcome! You've been signed in successfully.`);
     }
   }, [user, userType, navigate, from, isLoading]);
 
@@ -72,17 +67,17 @@ const Login = () => {
       const { error } = await signIn(email, password);
       
       if (error) {
+        console.error("Login error:", error.message);
         toast.error(error.message || "Failed to sign in");
         setIsSubmitting(false);
         return;
       }
       
-      // Successful login toast
-      toast.success("Signed in successfully!");
-      
-      // Redirection is handled by the useEffect
+      // Don't set isSubmitting to false here as the redirect is handled by the useEffect
+      // Success toast is shown after successful navigation
       
     } catch (error: any) {
+      console.error("Login exception:", error);
       toast.error(error.message || "An error occurred");
       setIsSubmitting(false);
     }
