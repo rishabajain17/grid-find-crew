@@ -40,7 +40,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Fetching profile for user:', userId);
       
-      // Check if profiles table exists by trying to query it
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url, user_type')
@@ -71,27 +70,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (userData?.user) {
           const userMetadata = userData.user.user_metadata || {};
+          
+          // Create a new profile with user metadata
           const newProfile = {
             id: userId,
             full_name: userMetadata.full_name || null,
+            avatar_url: null,
             user_type: (userMetadata.user_type as UserType) || null,
           };
           
+          // Insert the new profile
           const { error: insertError } = await supabase
             .from('profiles')
             .insert([{ 
               id: userId,
               full_name: newProfile.full_name,
-              user_type: newProfile.user_type
+              user_type: newProfile.user_type,
+              avatar_url: newProfile.avatar_url
             }]);
             
           if (insertError) {
             console.error('Error creating profile:', insertError);
           } else {
             console.log('Created new profile for user:', userId);
-            setProfile(newProfile as UserProfile);
+            setProfile(newProfile);
             setUserType(newProfile.user_type);
-            return newProfile as UserProfile;
+            return newProfile;
           }
         }
       }
@@ -109,16 +113,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(true);
       
       try {
-        // First check for existing session
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Auth session error:', sessionError);
-          setIsLoading(false);
-          return;
-        }
-        
-        // Set up auth state listener
+        // Set up auth state listener FIRST
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
             console.log('Auth state changed:', event, session?.user?.id);
@@ -129,17 +124,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 email: session.user.email || '',
               });
               
-              // Wait for profile fetch to complete before setting loading to false
+              // We must wait for fetchProfile to complete before marking as not loading
               await fetchProfile(session.user.id);
-              setIsLoading(false);
             } else {
               setUser(null);
               setProfile(null);
               setUserType(null);
-              setIsLoading(false);
             }
+            
+            setIsLoading(false);
           }
         );
+        
+        // THEN check for existing session
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Auth session error:', sessionError);
+          setIsLoading(false);
+          return;
+        }
         
         // Initialize from existing session if available
         if (sessionData.session) {
@@ -190,6 +194,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       
       toast.success("Signed in successfully!");
+      setIsLoading(false);
       return { error: null };
     } catch (error) {
       console.error('Sign in exception:', error);
@@ -204,6 +209,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Signing up user:', email, 'as', userType);
       setIsLoading(true);
       
+      // Sign up the user with metadata
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
@@ -222,6 +228,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return { error };
       }
 
+      console.log('Sign up successful, user data:', data);
+
       // If user was created, create a profile
       if (data?.user) {
         const { error: profileError } = await supabase
@@ -229,15 +237,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           .insert([{
             id: data.user.id,
             full_name: fullName,
-            user_type: userType
+            user_type: userType,
+            avatar_url: null
           }]);
           
         if (profileError) {
           console.error('Profile creation error:', profileError);
-          // Continue anyway as the auth trigger might handle it
+        } else {
+          console.log('Created profile for new user');
         }
         
-        // Immediately set the user and profile to avoid waiting for the onAuthStateChange
+        // Immediately set the user and profile
         setUser({
           id: data.user.id,
           email: data.user.email || '',
@@ -253,7 +263,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUserType(userType);
       }
 
-      toast.success("Signed up successfully!");
+      toast.success("Signed up successfully! You can now sign in.");
       setIsLoading(false);
       return { error: null };
     } catch (error) {

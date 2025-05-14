@@ -14,7 +14,7 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, user, userType, profile, isLoading } = useAuth();
+  const { signIn, user, userType, isLoading } = useAuth();
   
   // Get the page user was trying to access before being redirected to login
   const from = location.state?.from || "/";
@@ -22,13 +22,12 @@ const Login = () => {
   useEffect(() => {
     console.log("Login: Auth state check - User:", !!user, "UserType:", userType, "IsLoading:", isLoading);
     
-    // Don't redirect while loading
+    // Wait for loading to complete and make sure we have both user and userType
     if (isLoading) {
       console.log("Login: Still loading auth state...");
       return;
     }
     
-    // Don't redirect if not authenticated
     if (!user) {
       console.log("Login: No user authenticated yet");
       return;
@@ -36,8 +35,8 @@ const Login = () => {
     
     console.log("Login: User authenticated, userType:", userType);
     
-    // Redirect based on user type when available
-    if (userType) {
+    // Only redirect when we have both user and userType
+    if (user && userType) {
       setIsSubmitting(false);
       
       // Determine redirect path
@@ -50,8 +49,11 @@ const Login = () => {
       
       console.log(`Login: Redirecting to ${redirectPath}`);
       navigate(redirectPath, { replace: true });
-    } else {
+      toast.success(`Welcome! You've been redirected to your ${userType} dashboard.`);
+    } else if (user && !userType) {
       console.log("Login: User authenticated but userType not available yet");
+      // This should not happen if our profile fetching works correctly
+      toast.error("Could not determine your account type. Please contact support.");
     }
   }, [user, userType, navigate, from, isLoading]);
 

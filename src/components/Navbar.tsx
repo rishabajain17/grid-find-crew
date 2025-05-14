@@ -42,17 +42,23 @@ const Navbar = () => {
   };
 
   // Add a direct navigation handler for dashboard
-  const handleDashboardClick = (e) => {
+  const handleDashboardClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (!user) {
+      toast.error("You must be signed in to access your dashboard");
+      navigate("/login");
+      return;
+    }
+    
+    if (!userType) {
+      toast.error("Could not determine your user type. Please try signing out and back in.");
+      return;
+    }
+    
     const url = getDashboardUrl();
     console.log("Navigating to dashboard:", url);
     
-    if (url === '/' && userType === null) {
-      toast.error("Could not determine your dashboard. Please try signing out and back in.");
-    } else {
-      navigate(url);
-    }
-    
+    navigate(url);
     setMobileMenuOpen(false);
   };
 
