@@ -40,28 +40,29 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     try {
       console.log('Fetching profile for user:', userId);
       
-      const { data, error } = await supabase
+      // Check if the profiles table exists and has the expected columns
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url, user_type')
         .eq('id', userId)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching profile:', error);
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
         return null;
       }
 
-      if (data) {
-        console.log('Profile found:', data);
+      if (profileData) {
+        console.log('Profile found:', profileData);
         const userProfile = {
-          id: data.id,
-          full_name: data.full_name,
-          avatar_url: data.avatar_url,
-          user_type: data.user_type as UserType | null,
+          id: profileData.id,
+          full_name: profileData.full_name,
+          avatar_url: profileData.avatar_url,
+          user_type: profileData.user_type as UserType | null,
         };
         
         setProfile(userProfile);
-        setUserType(data.user_type as UserType | null);
+        setUserType(profileData.user_type as UserType | null);
         return userProfile;
       } else {
         // If no profile exists, create one with minimal information
@@ -70,6 +71,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         if (userData?.user) {
           const userMetadata = userData.user.user_metadata || {};
+          console.log('User metadata:', userMetadata);
           
           // Create a new profile with user metadata
           const newProfile = {
@@ -113,7 +115,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setIsLoading(true);
       
       try {
-        // Set up auth state listener FIRST
+        // Set up auth state listener FIRST to avoid missing events
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
             console.log('Auth state changed:', event, session?.user?.id);
@@ -218,7 +220,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signUp = async (email: string, password: string, userType: UserType, fullName: string) => {
     try {
-      console.log('Signing up user:', email, 'as', userType);
+      console.log('Signing up user:', email, 'as', userType, 'with name:', fullName);
       setIsLoading(true);
       
       // Sign up the user with metadata
@@ -244,6 +246,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       // If user was created, create a profile
       if (data?.user) {
+        console.log('Creating profile for new user:', data.user.id);
+        
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([{
@@ -255,8 +259,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           
         if (profileError) {
           console.error('Profile creation error:', profileError);
+          toast.error("Account created but profile setup failed. Please contact support.");
         } else {
-          console.log('Created profile for new user');
+          console.log('Created profile for new user:', data.user.id);
         }
         
         // Immediately set the user and profile
@@ -275,7 +280,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUserType(userType);
       }
 
-      toast.success("Signed up successfully! You can now sign in.");
+      toast.success("Signed up successfully!");
       setIsLoading(false);
       return { error: null };
     } catch (error) {
