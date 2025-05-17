@@ -2,44 +2,25 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, User } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, signOut, userType, getDashboardUrl } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
-  // Handler for signing out
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      navigate("/");
-      setMobileMenuOpen(false);
-    } catch (error) {
-      console.error("Sign out error:", error);
-      toast.error("Failed to sign out");
-    }
-  };
-
-  // Handler for navigating to dashboard
-  const handleDashboardClick = (e: React.MouseEvent) => {
+  // Handler for navigating to profile
+  const handleProfileClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!user) {
-      toast.error("You must be signed in to access your dashboard");
+      toast.error("You must be signed in to access your profile");
       navigate("/login");
       return;
     }
     
-    if (!userType) {
-      toast.error("Could not determine your user type. Please try signing out and back in.");
-      return;
-    }
-    
-    const dashboardUrl = getDashboardUrl(); 
-    console.log("Navbar: Navigating to dashboard:", dashboardUrl);
-    navigate(dashboardUrl);
+    navigate("/profile");
     setMobileMenuOpen(false);
   };
 
@@ -77,18 +58,10 @@ const Navbar = () => {
                 <Button 
                   variant="ghost" 
                   className="flex items-center space-x-2"
-                  onClick={handleDashboardClick}
+                  onClick={handleProfileClick}
                 >
-                  <LayoutDashboard size={18} />
-                  <span>Dashboard</span>
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  className="text-gray-700 hover:text-racing-red flex items-center space-x-2"
-                  onClick={handleSignOut}
-                >
-                  <LogOut size={18} />
-                  <span>Sign Out</span>
+                  <User size={18} />
+                  <span>Profile</span>
                 </Button>
               </>
             ) : (
@@ -155,15 +128,9 @@ const Navbar = () => {
               <>
                 <button
                   className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:bg-gray-50"
-                  onClick={handleDashboardClick}
+                  onClick={handleProfileClick}
                 >
-                  Dashboard
-                </button>
-                <button
-                  className="block w-full text-left px-3 py-2 rounded-md text-base font-medium text-red-700 hover:bg-gray-50"
-                  onClick={handleSignOut}
-                >
-                  Sign Out
+                  Profile
                 </button>
               </>
             ) : (

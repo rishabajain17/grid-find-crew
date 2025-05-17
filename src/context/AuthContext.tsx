@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserType } from '@/types/database.types';
 import { toast } from "sonner";
-import { fetchUserProfile, getDashboardUrl, UserProfile } from '@/utils/AuthUtils';
+import { fetchUserProfile, getDashboardUrl, UserProfile, updateUserProfile } from '@/utils/AuthUtils';
 
 interface User {
   id: string;
@@ -85,9 +85,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setProfile(userProfile);
             setUserType(userProfile.user_type);
           }
+        } else {
+          setIsLoading(false);
         }
-        
-        setIsLoading(false);
         
         return () => {
           subscription.unsubscribe();
@@ -190,7 +190,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Insert the profile record with all required fields
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert({
+          .upsert({
             id: data.user.id,
             full_name: fullName,
             user_type: userType,
@@ -280,23 +280,19 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Updating profile for:', user.id, updates);
       setIsLoading(true);
       
-      const { error } = await supabase
-        .from('profiles')
-        .update(updates)
-        .eq('id', user.id);
-
-      if (!error && profile) {
-        setProfile({ ...profile, ...updates });
+      const updatedProfile = await updateUserProfile(user.id, updates);
+      
+      if (updatedProfile) {
+        setProfile(updatedProfile);
         if (updates.user_type) setUserType(updates.user_type);
         console.log('Profile updated successfully');
-        toast.success("Profile updated successfully");
-      } else if (error) {
-        console.error('Error updating profile:', error);
-        toast.error(error.message || "Failed to update profile");
+        setIsLoading(false);
+        return { error: null };
+      } else {
+        console.error('Error updating profile: No profile returned');
+        setIsLoading(false);
+        return { error: new Error('Failed to update profile') };
       }
-
-      setIsLoading(false);
-      return { error };
     } catch (error) {
       console.error('Update profile exception:', error);
       setIsLoading(false);

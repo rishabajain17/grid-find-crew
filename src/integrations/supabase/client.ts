@@ -17,7 +17,7 @@ export const supabase = createClient<Database>(
       storage: localStorage,
       detectSessionInUrl: true,
       flowType: 'pkce',
-      debug: true
+      debug: false // Disable debug mode to reduce console noise
     }
   }
 );

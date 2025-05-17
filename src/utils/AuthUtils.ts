@@ -7,6 +7,12 @@ export interface UserProfile {
   full_name: string | null;
   avatar_url: string | null;
   user_type: UserType | null;
+  // Additional profile fields
+  bio?: string | null;
+  location?: string | null;
+  license_number?: string | null;
+  experience_years?: number | null;
+  skills?: string[] | null;
 }
 
 /**
@@ -19,7 +25,7 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
     // First try to get the existing profile
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, avatar_url, user_type')
+      .select('id, full_name, avatar_url, user_type, bio, location, license_number, experience_years, skills')
       .eq('id', userId)
       .maybeSingle();
 
@@ -31,12 +37,7 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
     // If profile exists, return it
     if (profileData) {
       console.log('AuthUtils: Profile found:', profileData);
-      return {
-        id: profileData.id,
-        full_name: profileData.full_name,
-        avatar_url: profileData.avatar_url,
-        user_type: profileData.user_type as UserType | null,
-      };
+      return profileData as UserProfile;
     }
     
     // If no profile exists, we need user metadata to create one
@@ -78,6 +79,43 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
     return newProfile;
   } catch (error) {
     console.error('AuthUtils: Profile fetch/create error:', error);
+    return null;
+  }
+};
+
+/**
+ * Updates a user profile in the database
+ */
+export const updateUserProfile = async (userId: string, updates: Partial<UserProfile>): Promise<UserProfile | null> => {
+  try {
+    console.log('AuthUtils: Updating profile for user:', userId, updates);
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update(updates)
+      .eq('id', userId);
+      
+    if (error) {
+      console.error('AuthUtils: Error updating profile:', error);
+      return null;
+    }
+    
+    // Fetch the updated profile
+    const { data, error: fetchError } = await supabase
+      .from('profiles')
+      .select('id, full_name, avatar_url, user_type, bio, location, license_number, experience_years, skills')
+      .eq('id', userId)
+      .single();
+      
+    if (fetchError) {
+      console.error('AuthUtils: Error fetching updated profile:', fetchError);
+      return null;
+    }
+    
+    console.log('AuthUtils: Updated profile:', data);
+    return data as UserProfile;
+  } catch (error) {
+    console.error('AuthUtils: Profile update error:', error);
     return null;
   }
 };

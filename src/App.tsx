@@ -20,17 +20,18 @@ import DriverMessages from "./pages/dashboard/DriverMessages";
 import EngineerApplications from "./pages/dashboard/EngineerApplications";
 import EngineerSaved from "./pages/dashboard/EngineerSaved";
 import EngineerMessages from "./pages/dashboard/EngineerMessages";
-import ManagementDashboard from "./pages/dashboard/ManagementDashboard"; // This will be created next
-import ManagementServices from "./pages/dashboard/ManagementServices"; // This will be created next
-import ManagementMessages from "./pages/dashboard/ManagementMessages"; // This will be created next
+import ManagementDashboard from "./pages/dashboard/ManagementDashboard";
+import ManagementServices from "./pages/dashboard/ManagementServices";
+import ManagementMessages from "./pages/dashboard/ManagementMessages";
 import Seats from "./pages/Seats";
 import Jobs from "./pages/Jobs";
 import SeatDetail from "./pages/SeatDetail";
 import JobDetail from "./pages/JobDetail";
 import PostSeat from "./pages/PostSeat";
 import PostJob from "./pages/PostJob";
-import PostManagementService from "./pages/PostManagementService"; // This will be created next
+import PostManagementService from "./pages/PostManagementService";
 import About from "./pages/About";
+import Profile from "./pages/Profile";
 import { ReactNode } from "react";
 
 const queryClient = new QueryClient();
@@ -55,17 +56,7 @@ const ProtectedRoute = ({
 
   if (allowedUserTypes && !allowedUserTypes.includes(userType || '')) {
     // Redirect based on user type
-    if (userType === 'team') {
-      return <Navigate to="/dashboard/team" replace />;
-    } else if (userType === 'driver') {
-      return <Navigate to="/dashboard/driver" replace />;
-    } else if (userType === 'engineer') {
-      return <Navigate to="/dashboard/engineer" replace />;
-    } else if (userType === 'management') {
-      return <Navigate to="/dashboard/management" replace />;
-    } else {
-      return <Navigate to="/" replace />;
-    }
+    return <Navigate to="/profile" replace />;
   }
 
   return <>{children}</>;
@@ -76,6 +67,11 @@ const AppRoutes = () => (
     <Route path="/" element={<Index />} />
     <Route path="/login" element={<Login />} />
     <Route path="/register" element={<Register />} />
+    <Route path="/profile" element={
+      <ProtectedRoute>
+        <Profile />
+      </ProtectedRoute>
+    } />
     
     {/* Team routes */}
     <Route path="/dashboard/team" element={

@@ -14,44 +14,24 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, user, userType, isLoading, getDashboardUrl } = useAuth();
+  const { signIn, user, isLoading } = useAuth();
   
   // Get the page user was trying to access before being redirected to login
   const from = location.state?.from || "/";
 
   useEffect(() => {
-    console.log("Login: Auth state check - User:", !!user, "UserType:", userType, "IsLoading:", isLoading);
-    
     // If still loading authentication state, do nothing yet
     if (isLoading) {
-      console.log("Login: Still loading auth state...");
       return;
     }
     
-    // If no user is authenticated, nothing to do
-    if (!user) {
-      console.log("Login: No user authenticated yet");
-      return;
+    // If user is authenticated, redirect
+    if (user) {
+      console.log("Login: User authenticated, redirecting to home");
+      navigate("/", { replace: true });
+      toast.success("You have been signed in successfully");
     }
-    
-    // At this point we have a user but may not have userType yet
-    console.log("Login: User authenticated, userType:", userType);
-    
-    // Only redirect when we have both user and userType
-    if (user && userType) {
-      // Determine redirect path
-      let redirectPath;
-      if (from && from !== "/") {
-        redirectPath = from;
-      } else {
-        redirectPath = getDashboardUrl();
-      }
-      
-      console.log(`Login: Redirecting to ${redirectPath}`);
-      navigate(redirectPath, { replace: true });
-      toast.success(`Welcome! You've been signed in successfully.`);
-    }
-  }, [user, userType, navigate, from, isLoading, getDashboardUrl]);
+  }, [user, navigate, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -64,21 +44,16 @@ const Login = () => {
     setIsSubmitting(true);
     
     try {
-      console.log("Login: Attempting login with email:", email);
       const { error } = await signIn(email, password);
       
       if (error) {
-        console.error("Login error:", error.message);
         toast.error(error.message || "Failed to sign in");
         setIsSubmitting(false);
         return;
       }
       
-      // Don't set isSubmitting to false here as the redirect is handled by the useEffect
-      // Success toast is shown after successful navigation
-      
+      // Success will be handled by the useEffect
     } catch (error: any) {
-      console.error("Login exception:", error);
       toast.error(error.message || "An error occurred");
       setIsSubmitting(false);
     }
