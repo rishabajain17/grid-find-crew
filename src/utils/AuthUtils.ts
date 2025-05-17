@@ -53,11 +53,16 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
     console.log('AuthUtils: User metadata for profile creation:', userMetadata);
     
     // Create the new profile data
-    const newProfile = {
+    const newProfile: UserProfile = {
       id: userId,
       full_name: userMetadata.full_name || null,
       avatar_url: null,
       user_type: (userMetadata.user_type as UserType) || null,
+      bio: null,
+      location: null,
+      license_number: null,
+      experience_years: null,
+      skills: null
     };
     
     // Insert the new profile into the database
@@ -67,7 +72,12 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
         id: userId,
         full_name: newProfile.full_name,
         user_type: newProfile.user_type,
-        avatar_url: newProfile.avatar_url
+        avatar_url: newProfile.avatar_url,
+        bio: newProfile.bio,
+        location: newProfile.location,
+        license_number: newProfile.license_number,
+        experience_years: newProfile.experience_years,
+        skills: newProfile.skills
       });
       
     if (insertError) {
@@ -105,10 +115,15 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
       .from('profiles')
       .select('id, full_name, avatar_url, user_type, bio, location, license_number, experience_years, skills')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
       
     if (fetchError) {
       console.error('AuthUtils: Error fetching updated profile:', fetchError);
+      return null;
+    }
+    
+    if (!data) {
+      console.error('AuthUtils: No profile data returned after update');
       return null;
     }
     
