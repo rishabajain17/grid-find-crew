@@ -25,7 +25,7 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
     // First try to get the existing profile
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
-      .select('id, full_name, avatar_url, user_type, bio, location, license_number, experience_years, skills')
+      .select('*')  // Select all columns to avoid missing column issues
       .eq('id', userId)
       .maybeSingle();
 
@@ -113,7 +113,7 @@ export const updateUserProfile = async (userId: string, updates: Partial<UserPro
     // Fetch the updated profile
     const { data, error: fetchError } = await supabase
       .from('profiles')
-      .select('id, full_name, avatar_url, user_type, bio, location, license_number, experience_years, skills')
+      .select('*')  // Select all columns to avoid missing column issues
       .eq('id', userId)
       .maybeSingle();
       
