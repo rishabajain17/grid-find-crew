@@ -3,17 +3,11 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { UserType } from '@/types/database.types';
 import { toast } from "sonner";
+import { fetchUserProfile, getDashboardUrl, UserProfile } from '@/utils/AuthUtils';
 
 interface User {
   id: string;
   email: string;
-}
-
-interface UserProfile {
-  id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  user_type: UserType | null;
 }
 
 interface AuthContextType {
@@ -25,6 +19,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, userType: UserType, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<{ error: any }>;
+  getDashboardUrl: () => string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -34,87 +29,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [userType, setUserType] = useState<UserType | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  // Enhanced fetchProfile function to be reused
-  const fetchProfile = async (userId: string) => {
-    try {
-      console.log('Fetching profile for user:', userId);
-      
-      // Check if the profiles table exists and has the expected columns
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url, user_type')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-        return null;
-      }
-
-      if (profileData) {
-        console.log('Profile found:', profileData);
-        const userProfile = {
-          id: profileData.id,
-          full_name: profileData.full_name,
-          avatar_url: profileData.avatar_url,
-          user_type: profileData.user_type as UserType | null,
-        };
-        
-        setProfile(userProfile);
-        setUserType(profileData.user_type as UserType | null);
-        return userProfile;
-      } else {
-        // If no profile exists, create one with minimal information
-        console.log('No profile found, creating new profile for user:', userId);
-        
-        // Get user metadata from auth
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        
-        if (userError) {
-          console.error('Error getting user data:', userError);
-          return null;
-        }
-        
-        if (userData?.user) {
-          const userMetadata = userData.user.user_metadata || {};
-          console.log('User metadata:', userMetadata);
-          
-          // Create a new profile with user metadata
-          const newProfile = {
-            id: userId,
-            full_name: userMetadata.full_name || null,
-            avatar_url: null,
-            user_type: (userMetadata.user_type as UserType) || null,
-          };
-          
-          // Insert the new profile
-          const { error: insertError } = await supabase
-            .from('profiles')
-            .insert([{ 
-              id: userId,
-              full_name: newProfile.full_name,
-              user_type: newProfile.user_type,
-              avatar_url: newProfile.avatar_url
-            }]);
-            
-          if (insertError) {
-            console.error('Error creating profile:', insertError);
-          } else {
-            console.log('Created new profile for user:', userId);
-            setProfile(newProfile);
-            setUserType(newProfile.user_type);
-            return newProfile;
-          }
-        }
-      }
-      
-      return null;
-    } catch (error) {
-      console.error('Profile fetch error:', error);
-      return null;
-    }
-  };
 
   useEffect(() => {
     // Initialize auth state
@@ -134,7 +48,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               });
               
               // Wait for fetchProfile to complete before marking as not loading
-              await fetchProfile(session.user.id);
+              const userProfile = await fetchUserProfile(session.user.id);
+              if (userProfile) {
+                setProfile(userProfile);
+                setUserType(userProfile.user_type);
+              }
             } else {
               setUser(null);
               setProfile(null);
@@ -162,7 +80,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             email: sessionData.session.user.email || '',
           });
           
-          await fetchProfile(sessionData.session.user.id);
+          const userProfile = await fetchUserProfile(sessionData.session.user.id);
+          if (userProfile) {
+            setProfile(userProfile);
+            setUserType(userProfile.user_type);
+          }
         }
         
         setIsLoading(false);
@@ -200,7 +122,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       if (data?.user) {
         // Make sure we get the profile info
-        const userProfile = await fetchProfile(data.user.id);
+        const userProfile = await fetchUserProfile(data.user.id);
         console.log('Retrieved user profile after sign in:', userProfile);
         
         // Update state to ensure we have both user and userType
@@ -330,13 +252,18 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     console.log('Signing out...');
     setIsLoading(true);
-    await supabase.auth.signOut();
-    setUser(null);
-    setProfile(null);
-    setUserType(null);
-    setIsLoading(false);
-    console.log('Signed out successfully');
-    toast.success("Signed out successfully");
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setProfile(null);
+      setUserType(null);
+      toast.success("Signed out successfully");
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast.error("Failed to sign out");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateProfile = async (updates: Partial<UserProfile>) => {
@@ -375,6 +302,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  // Use our helper function to get dashboard URL
+  const getCurrentDashboardUrl = () => getDashboardUrl(userType);
+
   const value = {
     user,
     profile,
@@ -384,6 +314,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     signUp,
     signOut,
     updateProfile,
+    getDashboardUrl: getCurrentDashboardUrl,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

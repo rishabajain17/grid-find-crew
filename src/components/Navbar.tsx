@@ -1,46 +1,29 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
+
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, User } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { toast } from "sonner";
 
 const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const { user, signOut, userType, profile } = useAuth();
+  const { user, signOut, userType, getDashboardUrl } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
 
-  // Enhanced debug effect to track auth state
-  useEffect(() => {
-    console.log("Navbar: Auth state updated - User:", !!user, "UserType:", userType, "Profile:", profile);
-  }, [user, userType, profile]);
-
+  // Handler for signing out
   const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-    setMobileMenuOpen(false);
-  };
-
-  // Determine dashboard URL based on user type
-  const getDashboardUrl = () => {
-    console.log("Navbar: Getting dashboard URL for userType:", userType);
-    switch (userType) {
-      case 'team':
-        return '/dashboard/team';
-      case 'driver':
-        return '/dashboard/driver';
-      case 'engineer':
-        return '/dashboard/engineer';
-      case 'management':
-        return '/dashboard/management';
-      default:
-        console.warn("No valid user type found for dashboard redirection, using fallback");
-        return '/';
+    try {
+      await signOut();
+      navigate("/");
+      setMobileMenuOpen(false);
+    } catch (error) {
+      console.error("Sign out error:", error);
+      toast.error("Failed to sign out");
     }
   };
 
-  // Add a direct navigation handler for dashboard
+  // Handler for navigating to dashboard
   const handleDashboardClick = (e: React.MouseEvent) => {
     e.preventDefault();
     if (!user) {
@@ -54,10 +37,9 @@ const Navbar = () => {
       return;
     }
     
-    const url = getDashboardUrl();
-    console.log("Navigating to dashboard:", url);
-    
-    navigate(url);
+    const dashboardUrl = getDashboardUrl(); 
+    console.log("Navbar: Navigating to dashboard:", dashboardUrl);
+    navigate(dashboardUrl);
     setMobileMenuOpen(false);
   };
 
@@ -97,7 +79,7 @@ const Navbar = () => {
                   className="flex items-center space-x-2"
                   onClick={handleDashboardClick}
                 >
-                  <User size={18} />
+                  <LayoutDashboard size={18} />
                   <span>Dashboard</span>
                 </Button>
                 <Button 

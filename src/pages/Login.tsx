@@ -14,7 +14,7 @@ const Login = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { signIn, user, userType, isLoading } = useAuth();
+  const { signIn, user, userType, isLoading, getDashboardUrl } = useAuth();
   
   // Get the page user was trying to access before being redirected to login
   const from = location.state?.from || "/";
@@ -43,14 +43,14 @@ const Login = () => {
       if (from && from !== "/") {
         redirectPath = from;
       } else {
-        redirectPath = `/dashboard/${userType}`;
+        redirectPath = getDashboardUrl();
       }
       
       console.log(`Login: Redirecting to ${redirectPath}`);
       navigate(redirectPath, { replace: true });
       toast.success(`Welcome! You've been signed in successfully.`);
     }
-  }, [user, userType, navigate, from, isLoading]);
+  }, [user, userType, navigate, from, isLoading, getDashboardUrl]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
