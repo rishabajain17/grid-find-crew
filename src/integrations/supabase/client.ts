@@ -16,7 +16,8 @@ export const supabase = createClient<Database>(
       autoRefreshToken: true,
       storage: localStorage,
       detectSessionInUrl: true,
-      flowType: 'pkce'
+      flowType: 'pkce',
+      debug: true  // Enable debug mode to see detailed auth logs
     }
   }
 );

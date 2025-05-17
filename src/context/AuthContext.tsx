@@ -67,7 +67,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       } else {
         // If no profile exists, create one with minimal information
         console.log('No profile found, creating new profile for user:', userId);
-        const { data: userData } = await supabase.auth.getUser();
+        
+        // Get user metadata from auth
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) {
+          console.error('Error getting user data:', userError);
+          return null;
+        }
         
         if (userData?.user) {
           const userMetadata = userData.user.user_metadata || {};
@@ -126,7 +133,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                 email: session.user.email || '',
               });
               
-              // We must wait for fetchProfile to complete before marking as not loading
+              // Wait for fetchProfile to complete before marking as not loading
               await fetchProfile(session.user.id);
             } else {
               setUser(null);
@@ -223,15 +230,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       console.log('Signing up user:', email, 'as', userType, 'with name:', fullName);
       setIsLoading(true);
       
-      // Sign up the user with metadata
+      // Make sure we're working with valid data
+      if (!email || !password || !userType || !fullName) {
+        const errorMsg = "Missing required registration data";
+        console.error(errorMsg);
+        toast.error(errorMsg);
+        setIsLoading(false);
+        return { error: new Error(errorMsg) };
+      }
+      
+      // Step 1: Sign up the user with metadata
       const { error, data } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            user_type: userType,
             full_name: fullName,
+            user_type: userType,
           },
+          emailRedirectTo: window.location.origin + '/login'
         },
       });
       
@@ -244,24 +261,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       console.log('Sign up successful, user data:', data);
 
-      // If user was created, create a profile
+      // Step 2: If user was created, create a profile
       if (data?.user) {
         console.log('Creating profile for new user:', data.user.id);
         
+        // Insert the profile record with all required fields
         const { error: profileError } = await supabase
           .from('profiles')
-          .insert([{
+          .insert({
             id: data.user.id,
             full_name: fullName,
             user_type: userType,
             avatar_url: null
-          }]);
+          });
           
         if (profileError) {
           console.error('Profile creation error:', profileError);
           toast.error("Account created but profile setup failed. Please contact support.");
         } else {
           console.log('Created profile for new user:', data.user.id);
+          
+          // Double-check that the profile was created by fetching it
+          const { data: checkProfileData, error: checkProfileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+            
+          if (checkProfileError || !checkProfileData) {
+            console.error('Profile verification failed:', checkProfileError);
+          } else {
+            console.log('Profile verification successful:', checkProfileData);
+          }
         }
         
         // Immediately set the user and profile
@@ -278,6 +309,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         });
         
         setUserType(userType);
+      } else {
+        console.error('No user data returned from signUp call');
+        toast.error("Something went wrong. Please try again.");
+        setIsLoading(false);
+        return { error: new Error("No user data returned") };
       }
 
       toast.success("Signed up successfully!");

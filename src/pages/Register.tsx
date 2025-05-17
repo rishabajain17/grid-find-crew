@@ -54,6 +54,7 @@ const Register = () => {
       navigate("/login");
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
+      console.error("Registration error:", error);
       setIsLoading(false);
     }
   };
