@@ -22,6 +22,7 @@ const Login = () => {
   useEffect(() => {
     console.log("Login: Auth state check - User:", !!user, "UserType:", userType, "IsLoading:", isLoading);
     
+    // If still loading authentication state, do nothing yet
     if (isLoading) {
       console.log("Login: Still loading auth state...");
       return;

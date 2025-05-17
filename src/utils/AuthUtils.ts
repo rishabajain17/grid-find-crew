@@ -62,7 +62,7 @@ export const fetchUserProfile = async (userId: string): Promise<UserProfile | nu
     // Insert the new profile into the database
     const { error: insertError } = await supabase
       .from('profiles')
-      .insert({
+      .upsert({
         id: userId,
         full_name: newProfile.full_name,
         user_type: newProfile.user_type,
